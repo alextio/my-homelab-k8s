@@ -1,0 +1,80 @@
+# Traefik Helm Values
+# Version is defined in argocd-app.yaml targetRevision — update both together when upgrading.
+
+# ── Entrypoints ───────────────────────────────────────────────────────────────
+# web (port 80): accepts HTTP but immediately redirects to HTTPS.
+# This is handled at the entrypoint level rather than as a per-route middleware,
+# so every request through Traefik is upgraded to HTTPS with no exceptions.
+#
+# websecure (port 443): the primary entrypoint for all traffic.
+# TLS termination happens here using certificates from cert-manager.
+ports:
+  web:
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+  websecure:
+    # Without this forwardedHeaders section, Traefik won't trust the X-Forwarded-For header from
+    # the Kubernetes pod network, causing it to see the pod/node IP instead of the real client IP.
+    # This means IP-based middleware such as ipAllowList will evaluate against the wrong IP and
+    # block legitimate requests from allowed subnets.
+    forwardedHeaders:
+      trustedIPs:
+        - "10.0.0.0/8"    # Internal Kubernetes VPC range
+    protocol: TCP
+# ── Service ───────────────────────────────────────────────────────────────────
+# LoadBalancer type so MetalLB assigns the reserved Traefik IP.
+# The IP is the first address in the MetalLB pool — see apps/metallb/ipaddresspool-default-pool.yaml.
+# loadBalancerIP pins Traefik to that specific address rather than taking
+# whatever MetalLB assigns next, which ensures DNS records stay valid.
+service:
+  type: LoadBalancer
+  spec:
+    loadBalancerIP: "192.168.5.202"
+    externalTrafficPolicy: Local
+
+# ── Dashboard ─────────────────────────────────────────────────────────────────
+# Disables the Helm chart's built-in IngressRoute for the dashboard only.
+# The dashboard itself remains fully enabled — we manage the IngressRoute
+# ourselves in ingressroute-dashboard.yaml so we can apply authentication
+# and TLS on our own terms.
+ingressRoute:
+  dashboard:
+    enabled: false
+
+# ── Providers ─────────────────────────────────────────────────────────────────
+# kubernetesCRD: watches for IngressRoute, Middleware, etc. CRDs across all
+# namespaces. This is Traefik's native Kubernetes integration and is the
+# primary way routes are configured in this stack.
+#
+# kubernetesIngress: also enabled so that any standard Kubernetes Ingress
+# resources (from Helm charts that don't support IngressRoute) are also
+# picked up automatically.
+providers:
+  kubernetesCRD:
+    enabled: true
+    allowCrossNamespace: true
+    # Required for ExternalName services with raw IP addresses in apps/traefik/external/.
+    # Traefik reads externalName directly from the Kubernetes API rather than via CoreDNS,
+    # so IP-based ExternalName services work here even though CoreDNS cannot resolve them.
+    allowExternalNameServices: true
+  kubernetesIngress:
+    enabled: true
+    allowExternalNameServices: true
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+logs:
+  general:
+    level: INFO
+  access:
+    enabled: true
+
+# ── Additional Arguments ──────────────────────────────────────────────────────
+# serversTransport.insecureSkipVerify: allows Traefik to forward to backends
+# that use self-signed certificates (common for internal services like iDRAC,
+# NAS UIs, etc.). This only affects backend connections, not client-facing TLS.
+additionalArguments:
+  - "--serversTransport.insecureSkipVerify=true"
