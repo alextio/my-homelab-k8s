@@ -1,0 +1,54 @@
+
+# 
+
+## Homepage
+[Homepage](https://gethomepage.dev/) is a snazzy UI that can automatically list out our homelab services that we're going to launch later. It also provides straightforward instructions on how to set it up in our Kubernetes cluster, so we'll start with this. We won't use Helm right now. Instead, we're going to do it the good ol' fashioned way of hand-applying all the yaml file manifests first.
+
+Copy all the files from [Homepage's Kubernetes instructions](https://gethomepage.dev/installation/k8s/). Your directory structure should look like this:
+```
+my-kubernetes-cluster/
+└── apps/
+    └── homepage/
+        ├── 00-serviceAccount.yaml
+        ├── 01-secret.yaml
+        ├── clusterRoleBinding.yaml
+        ├── configMap.yaml
+        ├── deployment.yaml
+        ├── ingress.yaml
+        └── service.yaml
+```
+Then run `kubectl apply -f argocd-kubernetes/apps/homepage`
+Note: You might be wondering why I've appended "00-" and "01-" to ServiceAccount and Service's respective yaml files. The reason is that **ServiceAccount must be applied *before* Secret**. Otherwise, kubernetes' token controller will silently delete the Secret because its matching ServiceAccount does not exist. kubectl automatically applies every `.yaml` file inside the directory in alphabetical order and every line inside each file from top to bottom. While most resources can be applied out-of-order, 
+
+### Breakdown of each Yaml file
+<!-- Insert brief explanation on what each yaml file is supposed to do. -->
+The files fall into three groups: who Homepage is allowed to be, how it runs, and how we reach it.
+
+#### Identity and permissions: `00-serviceAccount.yaml`, `01-secret.yaml`, `clusterRoleBinding.yaml`
+
+Homepage reads the Kubernetes API to show cluster stats and to find our services automatically, so it needs an identity with read access.
+
+- **`serviceAccount.yaml`**: creates a `homepage` ServiceAccount. This is the identity the Homepage pod uses when it talks to the Kubernetes API.
+- **`secret.yaml`**: In this case, it holds a `service-account-token` Secret, which simply asks Kubernetes to create a long-lived API token for the `homepage` ServiceAccount. When applied, the cluster's token controller fills in the actual secret token value into the Secret object store within the cluster. More will have to be said about this.
+- **`clusterRoleBinding.yaml`**: contains two resources separated by `---`:
+  - **ClusterRole**: lists what Homepage may do. It can only `get`/`list` namespaces, pods, nodes, Ingresses, Traefik IngressRoutes, Gateway API routes, and metrics. Nothing here can change the cluster.
+  - **ClusterRoleBinding**: gives that role to the `homepage` ServiceAccount. Because it's a *Cluster* role, the access covers every namespace. That's how Homepage can find Ingresses anywhere in the cluster.
+
+#### The app itself: `deployment.yaml`, `configMap.yaml`
+
+- **`deployment.yaml`**: runs the Homepage container as the `homepage` ServiceAccount, as a non-root user with all Linux capabilities dropped. Each ConfigMap key is mounted as a file in `/app/config/`, which is where Homepage looks for its config. A liveness probe on `/api/healthcheck` restarts the container if it stops responding.
+- **`configMap.yaml`**: holds Homepage's config files (`services.yaml`, `bookmarks.yaml`, `widgets.yaml`, `settings.yaml`, and so on). `kubernetes.yaml` is set to `mode: cluster`, which tells Homepage to use the in-cluster API with the ServiceAccount above.
+
+#### Getting traffic to it: `service.yaml`, `ingress.yaml`
+
+- **`service.yaml`**: a `ClusterIP` Service, a stable internal address (`homepage:3000`) that routes to any pod labeled `app.kubernetes.io/name: homepage`. Pods come and go; the Service name stays the same.
+- **`ingress.yaml`**: exposes the Service outside the cluster at `homepage.my.network`. The `gethomepage.dev/*` annotations make Homepage list *itself* on the dashboard, which it can do thanks to the RBAC permissions above.
+
+```
+browser → Ingress (homepage.my.network) → Service (homepage:3000) → Pod
+                                                                     ├─ reads config from ConfigMap
+                                                                     └─ queries K8s API as ServiceAccount
+                                                                        (token Secret + ClusterRole)
+```
+
+> **Gotcha:** in `deployment.yaml`, `HOMEPAGE_ALLOWED_HOSTS` defaults to `gethomepage.dev`. Change it to the hostname you actually use (here, `homepage.my.network`). Otherwise the page shows a "host validation failed" error.
