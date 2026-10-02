@@ -1,9 +1,9 @@
 
-# 
+# Homepage
 
-## Homepage
 [Homepage](https://gethomepage.dev/) is a snazzy UI that can automatically list out our homelab services that we're going to launch later. It also provides straightforward instructions on how to set it up in our Kubernetes cluster, so we'll start with this. We won't use Helm right now. Instead, we're going to do it the good ol' fashioned way of hand-applying all the yaml file manifests first.
 
+## Initial Setup
 Copy all the files from [Homepage's Kubernetes instructions](https://gethomepage.dev/installation/k8s/). Your directory structure should look like this:
 ```
 my-kubernetes-cluster/
@@ -58,17 +58,47 @@ In my case, I'm running my k3s node in a Colima VM on my macbook. The colima VM 
 there are two small tweaks we have to make in order to be able to access the Homepage service via `homepage.loaclhost`
 
 <!-- Show a git diff of what lines to change in both `deployment.yaml` and `ingress.yaml` -->
-```deployment.yaml
+```diff lang="yaml" title="apps/homepage/deployment.yaml"
              - name: HOMEPAGE_ALLOWED_HOSTS
 -              value: "$(MY_POD_IP):3000,gethomepage.dev"
 +              value: "$(MY_POD_IP):3000,homepage.localhost"
 ```
 
-```ingress.yaml
+```diff lang="yaml" title="apps/homepage/ingress.yaml"
  spec:
    rules:
 -    - host: "homepage.my.network"
 +    - host: "homepage.localhost"
 ```
 
-> **Gotcha:** in `deployment.yaml`, `HOMEPAGE_ALLOWED_HOSTS` defaults to `gethomepage.dev`. Change it to the hostname you actually use (here, `homepage.my.network`). Otherwise the page shows a "host validation failed" error.
+## The First CrashLoopBackoff
+
+### The Cause
+
+Running `kubectl logs -n default deploy/homepage --previous` yields the following:
+```
+error: ❌ Failed to initialize required config: /app/config/proxmox.yaml
+error: Reason: EACCES: permission denied, copyfile '/app/src/skeleton/proxmox.yaml' -> '/app/config/proxmox.yaml'
+error: Hint: Make /app/config writable or manually place the config file.
+```
+
+### The Fix
+This is a classic permission error where the app tries to write to a file in the image but because it's not explicitly specified in the volumeMounts list in `deployment.yaml`, it fails with `EACCESS: permission denied`. Simply add a mountPath to `app/config/proxmox.yaml` in `deployment.yaml`
+
+```diff lang="yaml" title="apps/homepage/deployment.yaml
+             - mountPath: /app/config/docker.yaml
+               name: homepage-config
+               subPath: docker.yaml
++            - mountPath: /app/config/proxmox.yaml
++              name: homepage-config
++              subPath: proxmox.yaml
+             - mountPath: /app/config/kubernetes.yaml
+               name: homepage-config
+```
+
+```diff lang="yaml" title="apps/homepage/configMap.yaml
+  docker.yaml: ""
++ proxmox.yaml: ""
+```
+
+Homepage needs both the `proxmox.yaml: ""` key in the ConfigMap and its subPath volumeMount. If you remove the key but keep the mount, the kubelet creates an empty directory at `/app/config/proxmox.yaml`. The pod starts, but eventually there might be issues if the container needs to read `proxmox.yaml` as an actual YAML file.

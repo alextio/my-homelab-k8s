@@ -20,6 +20,6 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: homepage
+                name: homepage      # <-- must equal Service's metadata.name
                 port:
-                  number: 3000
+                  number: 3000      # <-- must equal Service's spec.ports[].port
