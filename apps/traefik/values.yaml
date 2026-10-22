@@ -32,6 +32,8 @@ ports:
 # whatever MetalLB assigns next, which ensures DNS records stay valid.
 service:
   type: LoadBalancer
+  annotations:
+    metallb.io/loadBalancerIPs: "192.168.5.200"
   spec:
     loadBalancerIP: "192.168.5.202"
     externalTrafficPolicy: Local
