@@ -1,0 +1,48 @@
+# kube-prometheus-stack values (k3s)
+# Only overrides are listed; see `helm show values` for all defaults.
+
+# k3s runs these inside a single process and binds their metrics to
+# localhost, so the default scrape jobs would be permanently down.
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
+kubeEtcd:
+  enabled: false
+
+alertmanager:
+  enabled: false   # no receiver configured yet
+
+prometheus:
+  prometheusSpec:
+    retention: 15d
+    # Pick up ServiceMonitors/PodMonitors from any namespace and without
+    # the Helm release label (needed for traefik, agentgateway, etc.).
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path   # k3s default
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 20Gi
+
+grafana:
+  # Secret `grafana-admin` (keys: admin-user, admin-password) is created
+  # out of band so the password is never committed.
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+  persistence:
+    enabled: true
+    size: 5Gi
+  service:
+    type: ClusterIP  
+  grafana.ini:
+    dashboards:
+      default_home_dashboard_path: /tmp/dashboards/nodes.json # path is inside grafana container
