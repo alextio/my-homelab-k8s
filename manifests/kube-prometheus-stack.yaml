@@ -4,7 +4,7 @@
 # node-exporter in one chart. Values live in apps/kube-prometheus-stack/.
 #
 # Sync wave 0: runs after MetalLB (-2) and Traefik (-1) so the Grafana
-# IngressRoute can be served as soon as it exists.
+# HTTPRoute can be served as soon as it exists.
 #
 # ServerSideApply is required: the operator CRDs exceed the size limit of
 # the client-side last-applied annotation.
