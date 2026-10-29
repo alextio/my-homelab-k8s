@@ -19,7 +19,20 @@ spec:
     secretName: traefik-tls     
   routes:
     - kind: Rule
-      match: Host(`traefik.lan`) && (PathPrefix(`/dashboard`) || PathPrefix(`/api`))
+      # The IP route lets you reach the dashboard at https://192.168.6.200/dashboard/
+      # without a hosts entry. The served cert is still the *.lan cert, so expect a
+      # browser warning when using the IP.
+      match: (Host(`traefik.lan`) || Host(`192.168.6.200`)) && (PathPrefix(`/dashboard`) || PathPrefix(`/api`))
+      services:
+        - kind: TraefikService
+          name: api@internal
+    # Bare host or IP at exactly "/" redirects to /dashboard/. The middleware
+    # runs before the service, so the service is never reached for this route.
+    - kind: Rule
+      match: (Host(`traefik.lan`) || Host(`192.168.6.200`)) && Path(`/`)
+      middlewares:
+        - name: dashboard-root-redirect
+          namespace: traefik
       services:
         - kind: TraefikService
           name: api@internal

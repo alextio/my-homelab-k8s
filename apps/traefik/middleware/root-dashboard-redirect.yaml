@@ -1,0 +1,13 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: root-dashboard-redirect
+  namespace: traefik
+spec:
+  # Redirects a bare host or IP (e.g. https://192.168.6.200/) to the dashboard.
+  # Only referenced by the root route in ingressroute-dashboard.yaml, so it
+  # does not affect any other route.
+  redirectRegex:
+    regex: "^(https?://[^/]+)/?$"
+    replacement: "${1}/dashboard/"
+    permanent: false
