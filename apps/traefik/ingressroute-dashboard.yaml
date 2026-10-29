@@ -31,7 +31,7 @@ spec:
     - kind: Rule
       match: (Host(`traefik.lan`) || Host(`192.168.6.200`)) && Path(`/`)
       middlewares:
-        - name: dashboard-root-redirect
+        - name: root-dashboard-redirect
           namespace: traefik
       services:
         - kind: TraefikService
