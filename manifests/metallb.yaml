@@ -9,7 +9,7 @@ spec:
   project: default
   sources:
     - repoURL: https://metallb.github.io/metallb
-      chart: MetalLB
+      chart: metallb
       targetRevision: 0.16.1
       helm:
         valueFiles:
