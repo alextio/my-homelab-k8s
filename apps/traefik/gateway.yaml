@@ -1,0 +1,25 @@
+# Shared Gateway that all HTTPRoutes attach to. Replaces the websecure
+# entrypoint as the attachment point for routes.
+#
+# Listener port is the container port behind the websecure entrypoint (8443),
+# not the externally exposed 443 (hostPort/Service map 443 -> 8443).
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: traefik
+  namespace: traefik
+spec:
+  gatewayClassName: traefik
+  listeners:
+    - name: websecure
+      protocol: HTTPS
+      port: 8443
+      hostname: "*.lan"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          # Written by the traefik-wildcard Certificate (certificate-wildcard.yaml).
+          - name: traefik-tls
+      allowedRoutes:
+        namespaces:
+          from: All

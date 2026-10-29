@@ -27,7 +27,7 @@ ports:
     protocol: TCP
 # ── Service ───────────────────────────────────────────────────────────────────
 # LoadBalancer type so MetalLB assigns the reserved Traefik IP.
-# The IP is the first address in the MetalLB pool — see apps/metallb/ipaddresspool-default-pool.yaml.
+# The IP is the first address in the MetalLB pool — see apps/metallb/default-pool.yaml.
 # loadBalancerIP pins Traefik to that specific address rather than taking
 # whatever MetalLB assigns next, which ensures DNS records stay valid.
 service:
@@ -35,26 +35,33 @@ service:
   annotations:
     metallb.io/loadBalancerIPs: "192.168.5.200"
   spec:
-    loadBalancerIP: "192.168.5.202"
     externalTrafficPolicy: Local
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 # Disables the Helm chart's built-in IngressRoute for the dashboard only.
-# The dashboard itself remains fully enabled — we manage the IngressRoute
-# ourselves in ingressroute-dashboard.yaml so we can apply authentication
-# and TLS on our own terms.
+# The dashboard itself remains fully enabled — we manage the route
+# ourselves in ingressroute-dashboard.yaml. It stays an IngressRoute because
+# it targets Traefik's internal `api@internal` TraefikService, which only
+# IngressRoute can reference; HTTPRoute cannot express it.
+# This IngressRoute is the only one in this stack. Third-party services use
+# HTTPRoute (see the Providers section below).
 ingressRoute:
   dashboard:
     enabled: false
 
 # ── Providers ─────────────────────────────────────────────────────────────────
-# kubernetesCRD: watches for IngressRoute, Middleware, etc. CRDs across all
-# namespaces. This is Traefik's native Kubernetes integration and is the
-# primary way routes are configured in this stack.
+# kubernetesGateway: the primary way routes are configured in this stack.
+# Gateway API HTTPRoutes are used for all third-party service traffic and
+# attach to the Gateway defined in gateway.yaml.
+#
+# kubernetesCRD: kept for the dashboard IngressRoute (ingressroute-dashboard.yaml)
+# and Traefik-specific resources (TraefikService, Middleware, ServersTransport)
+# plus the ExternalName workaround below. Do not use IngressRoute for anything
+# else; new routes should be HTTPRoutes.
 #
 # kubernetesIngress: also enabled so that any standard Kubernetes Ingress
-# resources (from Helm charts that don't support IngressRoute) are also
-# picked up automatically.
+# resources (from Helm charts that only support Ingress) are also picked up
+# automatically.
 providers:
   kubernetesCRD:
     enabled: true
@@ -68,6 +75,10 @@ providers:
     allowExternalNameServices: true
   kubernetesGateway:
     enabled: true
+
+# The chart's default Gateway is disabled; we manage our own in gateway.yaml.
+gateway:
+  enabled: false
 
 # ── Additional Arguments ──────────────────────────────────────────────────────
 # serversTransport.insecureSkipVerify: allows Traefik to forward to backends
