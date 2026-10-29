@@ -1,0 +1,49 @@
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayBackend
+metadata:
+  name: backend-claude
+  namespace: agentgateway-system
+spec:
+  ai:
+    provider:
+      anthropic: {}
+  policies:
+    ai:
+      routes:
+        '/v1/messages': Messages
+        '/v1/messages/count_tokens': AnthropicTokenCount
+        '*': Passthrough
+---
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: claude-buffer
+  namespace: agentgateway-system
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: agentgateway-proxy
+  frontend:
+    http:
+      maxBufferSize: 10485760
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: anthropic
+  namespace: agentgateway-system
+spec:
+  parentRefs:
+    - name: agentgateway-proxy
+      namespace: agentgateway-system
+  rules:
+    - matches:
+      - path:
+          type: PathPrefix
+          value: /claude
+      backendRefs:
+      - name: backend-claude
+        namespace: agentgateway-system
+        group: agentgateway.dev
+        kind: AgentgatewayBackend

@@ -1,0 +1,28 @@
+# Make sure you install the agentgateway controllers first:
+# helm upgrade -i agentgateway-crds oci://cr.agentgateway.dev/charts/agentgateway \
+# --create-namespace --namespace agentgateway-system \
+# --version v1.6.0 \
+# --set controller.image.pullPolicy=Always
+
+# When you apply this, agentgateway's controller will see this (because of the gatewayClassName: agentgateway)
+# and create several k8s resources: 
+# - a Deployment running the agentgateway proxy pods
+# - a Service in front of those pods with `type: LoadBalancer` by default
+# - a ServiceAccount and maybe some other configs as well. 
+
+# This is the standard Kubernetes operator pattern: you declare what you want in a custom resource, and a controller turns it into lower-level built-in resources. A Deployment creating ReplicaSets and Pods works the same way.
+
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: agentgateway-proxy
+  namespace: agentgateway-system
+spec:
+  gatewayClassName: agentgateway
+  listeners:
+  - protocol: HTTP
+    port: 8080
+    name: http
+    allowedRoutes:
+      namespaces:
+        from: All
