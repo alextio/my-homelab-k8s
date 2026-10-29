@@ -66,12 +66,7 @@ providers:
   kubernetesIngress:
     enabled: true
     allowExternalNameServices: true
-
-# ── Logs ──────────────────────────────────────────────────────────────────────
-logs:
-  general:
-    level: INFO
-  access:
+  kubernetesGateway:
     enabled: true
 
 # ── Additional Arguments ──────────────────────────────────────────────────────
