@@ -33,7 +33,7 @@ ports:
 service:
   type: LoadBalancer
   annotations:
-    metallb.io/loadBalancerIPs: "192.168.5.200"
+    metallb.io/loadBalancerIPs: "192.168.6.200"
   spec:
     externalTrafficPolicy: Local
 

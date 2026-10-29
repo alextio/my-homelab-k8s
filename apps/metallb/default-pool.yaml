@@ -17,5 +17,5 @@ metadata:
   namespace: metallb-system
 spec:
   addresses:
-    - 192.168.5.200/32                 # reserved for Traefik
-    - 192.168.5.201-192.168.5.210   
+    - 192.168.6.200/32                 # reserved for Traefik
+    - 192.168.6.201-192.168.6.210   

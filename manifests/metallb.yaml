@@ -4,7 +4,7 @@ metadata:
   name: metallb
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "-2"  # traefik waits on this (wave -1)
+    argocd.argoproj.io/sync-wave: "-2"  # operator
 spec:
   project: default
   sources:
