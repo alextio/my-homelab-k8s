@@ -6,7 +6,7 @@ kind: ClusterIssuer
 metadata:
   name: homelab-ca
   annotations:
-    argocd.argoproj.io/sync-wave: "-1"
+    argocd.argoproj.io/sync-wave: "1"  # after the chart (wave 0); reports not-ready until the root CA Secret exists
 spec:
   ca:
     secretName: homelab-root-ca

@@ -9,7 +9,7 @@ metadata:
   name: homelab-root-ca
   namespace: cert-manager
   annotations:
-    argocd.argoproj.io/sync-wave: "-2"
+    argocd.argoproj.io/sync-wave: "1"  # after the chart (wave 0): the webhook must be running
 spec:
   isCA: true
   commonName: homelab-root-ca

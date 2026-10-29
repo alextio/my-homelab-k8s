@@ -3,15 +3,17 @@
 # Issues and renews TLS certificates in-cluster. First consumer is the
 # bitwarden-sdk-server deployed alongside External Secrets Operator.
 #
-# Sync wave -3: runs before everything else so Issuer/Certificate CRDs
-# exist by the time ESO (wave -2) syncs its certificate resources.
+# Sync wave -2: operator. Its CRDs come from cert-manager-crds (wave -3),
+# so they are established before this app starts. Inside this app the
+# chart is wave 0 and the ClusterIssuers/Certificate in apps/cert-manager/
+# are wave 1, so the webhook is running before they are applied.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: cert-manager
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "-3"
+    argocd.argoproj.io/sync-wave: "-2"
 spec:
   project: default
   sources:

@@ -1,0 +1,34 @@
+# ArgoCD Application — cert-manager CRDs
+#
+# Installs only the cert-manager CRDs, separate from the cert-manager chart
+# (crds.enabled: false in apps/cert-manager/values.yaml). This guarantees
+# the CRDs are established before anything uses them. Mirrors
+# gateway-api-crds.
+#
+# Sync wave -3: CRDs only. cert-manager (wave -2) starts once this app is
+# Healthy.
+#
+# prune: false — deleting a CRD deletes every Certificate/Issuer of that
+# kind, so a bad sync must never remove them.
+#
+# The CRD version lives in apps/cert-manager-crds/kustomization.yaml and
+# must match the chart targetRevision in manifests/cert-manager.yaml.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager-crds
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/alextio/my-homelab-k8s
+    targetRevision: HEAD
+    path: apps/cert-manager-crds
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated: { prune: false, selfHeal: true }
+    syncOptions:
+      - ServerSideApply=true
