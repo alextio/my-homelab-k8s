@@ -1,0 +1,47 @@
+# ArgoCD Application — cert-manager
+#
+# Issues and renews TLS certificates in-cluster. First consumer is the
+# bitwarden-sdk-server deployed alongside External Secrets Operator.
+#
+# Sync wave -3: runs before everything else so Issuer/Certificate CRDs
+# exist by the time ESO (wave -2) syncs its certificate resources.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  project: default
+  sources:
+    # Source 1: The cert-manager Helm chart
+    - repoURL: https://charts.jetstack.io
+      chart: cert-manager
+      targetRevision: v1.21.3
+      helm:
+        valueFiles:
+          - $values/apps/cert-manager/values.yaml
+    # Source 2: This repo, used only as a $values reference.
+    - repoURL: https://github.com/alextio/my-homelab-k8s
+      targetRevision: HEAD
+      ref: values
+    # Source 3: This repo, providing the ClusterIssuers and root CA
+    # Certificate in apps/cert-manager/ (values.yaml is excluded since
+    # Source 1 consumes it via $values).
+    - repoURL: https://github.com/alextio/my-homelab-k8s
+      targetRevision: HEAD
+      path: apps/cert-manager
+      directory:
+        recurse: true
+        exclude: 'values.yaml'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

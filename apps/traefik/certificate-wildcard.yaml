@@ -1,0 +1,16 @@
+# Wildcard certificate for the shared Gateway's websecure listener.
+# secretName must match certificateRefs in gateway.yaml. One cert covers
+# every *.lan HTTPRoute hostname (grafana.lan, etc.).
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: traefik-wildcard
+  namespace: traefik
+spec:
+  secretName: traefik-tls
+  dnsNames:
+    - "*.lan"
+  issuerRef:
+    name: homelab-ca
+    kind: ClusterIssuer
+    group: cert-manager.io

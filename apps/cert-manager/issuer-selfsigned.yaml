@@ -1,0 +1,10 @@
+# Bootstrap issuer. Only used to sign the homelab root CA certificate in
+# certificate-homelab-root-ca.yaml; nothing else should reference it.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned-root
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  selfSigned: {}

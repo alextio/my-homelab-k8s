@@ -14,9 +14,12 @@ metadata:
 spec:
   entryPoints:
     - websecure
+  tls:
+    # Written by the traefik-wildcard Certificate (certificate-wildcard.yaml).
+    secretName: traefik-tls     
   routes:
     - kind: Rule
-      match: Host(`traefik.localhost`) && (PathPrefix(`/dashboard`) || PathPrefix(`/api`))
+      match: Host(`traefik.lan`) && (PathPrefix(`/dashboard`) || PathPrefix(`/api`))
       services:
         - kind: TraefikService
           name: api@internal

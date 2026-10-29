@@ -1,0 +1,13 @@
+# cert-manager Helm values
+#
+# crds.enabled: the chart installs and upgrades the CRDs itself, so Argo
+# manages them with the rest of the release. (Replaces the deprecated
+# installCRDs flag.)
+#
+# crds.keep: if the Application is ever deleted, the CRDs (and with them
+# every Certificate/Issuer in the cluster) are left in place rather than
+# wiped. This is the chart's default; it's written out here so it's a
+# deliberate choice.
+crds:
+  enabled: true
+  keep: true
