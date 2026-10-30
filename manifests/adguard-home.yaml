@@ -1,0 +1,46 @@
+# ArgoCD Application — AdGuard Home
+#
+# Network-wide DNS filter. DNS (53 TCP/UDP) is exposed on its own MetalLB IP
+# (see apps/adguard-home/values.yaml), not through Traefik; only the dashboard
+# goes through Traefik as adguard.lan (HTTPRoute rendered by the chart).
+# The admin password comes from Bitwarden via apps/adguard-home/externalsecret.yaml
+# (needs external-secrets, wave -2, and its ClusterSecretStore).
+#
+# Wave 0 (workloads); needs metallb (-2) and traefik (-1) already synced.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: adguard-home
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    # Source 1: The AdGuard Home Helm chart
+    - repoURL: https://repo.helmforge.dev
+      chart: adguard-home
+      targetRevision: 1.5.4
+      helm:
+        valueFiles:
+          - $values/apps/adguard-home/values.yaml
+    # Source 2: This repo, used only as a $values reference.
+    - repoURL: https://github.com/alextio/my-homelab-k8s
+      targetRevision: HEAD
+      ref: values
+    # Source 3: This repo, providing the ConfigMap + ExternalSecret in apps/adguard-home/
+    # (values.yaml is excluded since Source 1 consumes it).
+    - repoURL: https://github.com/alextio/my-homelab-k8s
+      targetRevision: HEAD
+      path: apps/adguard-home
+      directory:
+        recurse: true
+        exclude: 'values.yaml'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: adguard-home
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
