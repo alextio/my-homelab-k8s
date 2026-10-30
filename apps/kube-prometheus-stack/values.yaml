@@ -32,8 +32,8 @@ prometheus:
               storage: 20Gi
 
 grafana:
-  # Secret `grafana-admin` (keys: admin-user, admin-password) is created
-  # out of band so the password is never committed.
+  # Secret `grafana-admin` (keys: admin-user, admin-password) is rendered
+  # by externalsecret-grafana-admin.yaml so the password is never committed.
   admin:
     existingSecret: grafana-admin
     userKey: admin-user
@@ -42,7 +42,7 @@ grafana:
     enabled: true
     size: 5Gi
   service:
-    type: ClusterIP  
+    type: ClusterIP
   grafana.ini:
     dashboards:
       default_home_dashboard_path: /tmp/dashboards/nodes.json # path is inside grafana container
