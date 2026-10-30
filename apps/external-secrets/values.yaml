@@ -1,0 +1,7 @@
+installCRDs: true
+
+# Required for the Bitwarden Secrets Manager provider: ESO calls this
+# service, which in turn calls the Bitwarden API. It serves HTTPS using
+# the bitwarden-tls-certs Secret (see certificate-bitwarden-sdk-server.yaml).
+bitwarden-sdk-server:
+  enabled: true

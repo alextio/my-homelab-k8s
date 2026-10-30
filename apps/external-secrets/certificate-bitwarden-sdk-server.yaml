@@ -1,0 +1,18 @@
+# TLS cert for bitwarden-sdk-server, signed by the homelab CA. The Secret
+# holds tls.crt, tls.key and ca.crt: the server mounts the first two and
+# the ClusterSecretStore trusts ca.crt via caProvider.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: bitwarden-tls-certs
+  namespace: external-secrets
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"  # after the chart (wave 0); needs homelab-ca ready
+spec:
+  secretName: bitwarden-tls-certs
+  dnsNames:
+    - bitwarden-sdk-server.external-secrets.svc.cluster.local
+  issuerRef:
+    name: homelab-ca
+    kind: ClusterIssuer
+    group: cert-manager.io
