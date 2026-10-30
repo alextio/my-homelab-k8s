@@ -7,7 +7,7 @@ metadata:
   name: bitwarden-tls-certs
   namespace: external-secrets
   annotations:
-    argocd.argoproj.io/sync-wave: "1"  # after the chart (wave 0); needs homelab-ca ready
+    argocd.argoproj.io/sync-wave: "-1"  # before the chart (wave 0): the sdk-server pod mounts this Secret, so the chart can't go Healthy without it
 spec:
   secretName: bitwarden-tls-certs
   dnsNames:
