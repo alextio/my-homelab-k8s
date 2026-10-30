@@ -1,0 +1,34 @@
+# Chart: helmforge/adguard-home (https://repo.helmforge.dev)
+# Config is seeded from the adguard-home-config Secret (externalsecret.yaml),
+# which skips the setup wizard; the admin UI listens on 80.
+
+# Gives stable Service names (adguard-home-web / adguard-home-dns),
+# independent of the Argo release name.
+fullnameOverride: adguard-home
+
+config:
+  # Written by apps/adguard-home/externalsecret.yaml from Bitwarden. We don't
+  # use the chart's own externalSecrets block: it can't template the file.
+  existingSecret: adguard-home-config
+
+service:
+  # Dashboard stays ClusterIP; Traefik reaches it via the HTTPRoute below.
+  dns:
+    type: LoadBalancer
+    annotations:
+      # Dedicated IP so DNS bypasses Traefik. Pinned so the DNS server
+      # address never changes. Must sit inside default-pool
+      # (apps/metallb/default-pool.yaml) and outside the DHCP range.
+      metallb.io/loadBalancerIPs: 192.168.6.201
+    # Keeps the real client IP (per-client stats/filtering) and skips SNAT.
+    externalTrafficPolicy: Local
+
+# Chart-rendered HTTPRoute for adguard.lan on the shared Traefik Gateway.
+gateway:
+  enabled: true
+  parentRefs:
+    - name: traefik
+      namespace: traefik
+      sectionName: websecure
+  hostnames:
+    - adguard.lan

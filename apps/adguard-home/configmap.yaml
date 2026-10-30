@@ -1,0 +1,46 @@
+# Non-secret AdGuardHome.yaml, kept apart from the ExternalSecret so config
+# edits don't touch secret plumbing. It is a template: ESO reads it via
+# templateFrom (externalsecret.yaml), fills in {{ .adminHash }} from
+# Bitwarden, and writes the result to the adguard-home-config Secret that
+# the chart mounts (config.existingSecret).
+#
+# The chart's init container copies the rendered file into the conf volume
+# ONLY when AdGuardHome.yaml doesn't exist yet, so edits here apply on first
+# seed only. Later changes: use the UI, or delete the conf PVC to re-seed.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: adguard-home-config-template
+  namespace: adguard-home
+data:
+  AdGuardHome.yaml: |
+    http:
+      address: 0.0.0.0:80
+    users:
+      - name: admin
+        password: "{{ .adminHash }}"
+    dns:
+      bind_hosts:
+        - 0.0.0.0
+      port: 53
+      upstream_dns:
+        - https://dns.cloudflare.com/dns-query
+        - https://dns.google/dns-query
+      bootstrap_dns:
+        - 1.1.1.1
+        - 8.8.8.8
+    filtering:
+      protection_enabled: true
+      filtering_enabled: true
+      # Every *.lan name goes to Traefik, which routes by Host header.
+      # Mirrors 02-ansible/playbooks/dns/templates/rewrites.yml.j2;
+      # keep the IP in sync with apps/traefik/values.yaml.
+      rewrites:
+        - domain: '*.lan'
+          answer: 192.168.6.200
+    filters:
+      - enabled: true
+        url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt
+        name: AdGuard DNS filter
+        id: 1
+    schema_version: 29
