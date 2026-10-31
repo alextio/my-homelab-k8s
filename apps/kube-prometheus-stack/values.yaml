@@ -32,12 +32,9 @@ prometheus:
               storage: 20Gi
 
 grafana:
-  # Secret `grafana-admin` (keys: admin-user, admin-password) is rendered
-  # by externalsecret-grafana-admin.yaml so the password is never committed.
-  admin:
-    existingSecret: grafana-admin
-    userKey: admin-user
-    passwordKey: admin-password
+  # Throwaway bootstrap password. Grafana only reads it when it first creates
+  # its database; change it in the UI afterwards.
+  adminPassword: change-me-please
   persistence:
     enabled: true
     size: 5Gi
