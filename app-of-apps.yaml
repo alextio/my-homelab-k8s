@@ -19,13 +19,6 @@
 #   3. ArgoCD prunes the Application and all resources it managed
 #   4. Optionally delete the apps/<app-name>/ directory
 #
-# ── Why it lives at the repo root ────────────────────────────────────────────
-# This file lives outside apps/ deliberately. It is not a child Application
-# and does not need to manage itself — its only job is to bootstrap the
-# discovery pattern. Keeping it at the root makes the entry point obvious to
-# anyone reading the repo, and separates the "what starts everything" concern
-# from the per-application configs under apps/.
-#
 # ── When to update this file ─────────────────────────────────────────────────
 # This file rarely needs changing. You would update it if you:
 #   - Rename or restructure the manifests/ directory
