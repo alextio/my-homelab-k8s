@@ -1,0 +1,10 @@
+# agentgateway controller Helm values
+#
+# The CRDs are installed by the separate agentgateway-crds Application
+# (sync wave -3, apps/agentgateway-crds/), so they are established before
+# this release starts.
+controller:
+  image:
+    pullPolicy: Always
+  extraEnv:
+    AGW_ENABLE_EXPERIMENTAL_GATEWAY_API_FEATURES: "true"

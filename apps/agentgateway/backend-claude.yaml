@@ -2,7 +2,7 @@ apiVersion: agentgateway.dev/v1alpha1
 kind: AgentgatewayBackend
 metadata:
   name: backend-claude
-  namespace: agentgateway-system
+  namespace: agentgateway
 spec:
   ai:
     provider:
@@ -18,7 +18,7 @@ apiVersion: agentgateway.dev/v1alpha1
 kind: AgentgatewayPolicy
 metadata:
   name: claude-buffer
-  namespace: agentgateway-system
+  namespace: agentgateway
 spec:
   targetRefs:
   - group: gateway.networking.k8s.io
@@ -32,11 +32,11 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: anthropic
-  namespace: agentgateway-system
+  namespace: agentgateway
 spec:
   parentRefs:
     - name: agentgateway-proxy
-      namespace: agentgateway-system
+      namespace: agentgateway
   rules:
     - matches:
       - path:
@@ -44,6 +44,6 @@ spec:
           value: /claude
       backendRefs:
       - name: backend-claude
-        namespace: agentgateway-system
+        namespace: agentgateway
         group: agentgateway.dev
         kind: AgentgatewayBackend

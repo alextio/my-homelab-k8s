@@ -1,9 +1,11 @@
-# ArgoCD Application — Agentgateway
+# ArgoCD Application — agentgateway
 #
-# After bootstrap, ArgoCD takes over management of Agentgateway using this
-# manifest. It points at the Helm chart with the same values.yaml used
-# during bootstrap, ensuring the configuration stays consistent.
+# Installs the agentgateway controller plus the gateway-api Gateway and
+# agentgateway backends in apps/agentgateway/. The CRDs come from
+# agentgateway-crds (wave -3) and gateway-api-crds (wave -3), so they are
+# established before this app starts.
 #
+# Sync wave 0: workload (default).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -13,19 +15,13 @@ spec:
   project: default
   destination:
     server: https://kubernetes.default.svc
-    namespace: agentgateway-system
+    namespace: agentgateway
   sources:
-    # Source 1: agentgateway CRDs
+    # Source 1: The agentgateway controller Helm chart
     - repoURL: cr.agentgateway.dev/charts
-      chart: agentgateway-crds
+      chart: agentgateway
       targetRevision: v1.6.0
       helm:
-        skipCrds: false
-        parameters:
-        - name: controller.image.pullPolicy
-          value: "Always"
-        - name: controller.extraEnv.AGW_ENABLE_EXPERIMENTAL_GATEWAY_API_FEATURES
-          value: "true"
         valueFiles:
           - $values/apps/agentgateway/values.yaml
     # Source 2: This repo, used only as a $values reference for the Helm
@@ -34,7 +30,7 @@ spec:
       targetRevision: HEAD
       ref: values
     # Source 3: This repo, providing all supporting manifests in apps/agentgateway/
-    # (middlewares, IngressRoutes, TLSStore, certificates, etc.)
+    # (gateway-api Gateway, agentgateway backends, OTel collector).
     # Excludes values.yaml since that is consumed by Source 1 via $values,
     # not applied directly as a manifest.
     - repoURL: https://github.com/alextio/my-homelab-k8s

@@ -1,0 +1,35 @@
+# ArgoCD Application — agentgateway CRDs
+#
+# Installs only the agentgateway CRDs, separate from the agentgateway
+# controller chart (manifests/agentgateway.yaml). This guarantees the CRDs
+# are established before anything uses them. Mirrors cert-manager-crds.
+#
+# Sync wave -3: CRDs only. agentgateway (wave 0) starts once this app is
+# Healthy.
+#
+# prune: false — deleting a CRD deletes every resource of that kind, so a
+# bad sync must never remove them.
+#
+# The chart version here must match the targetRevision in
+# manifests/agentgateway.yaml.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: agentgateway-crds
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  project: default
+  source:
+    repoURL: cr.agentgateway.dev/charts
+    chart: agentgateway-crds
+    targetRevision: v1.6.0
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: agentgateway
+  syncPolicy:
+    automated: { prune: false, selfHeal: true }
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
