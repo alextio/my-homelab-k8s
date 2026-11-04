@@ -1,0 +1,16 @@
+# Certificate for the agentgateway-proxy Gateway's https listener.
+# secretName must match certificateRefs in gateway.yaml. Issued by the
+# homelab CA, so clients need to trust it like the other *.lan services.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: agentgateway-tls
+  namespace: agentgateway
+spec:
+  secretName: agentgateway-tls
+  dnsNames:
+    - agentgateway.lan
+  issuerRef:
+    name: homelab-ca
+    kind: ClusterIssuer
+    group: cert-manager.io
