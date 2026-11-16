@@ -1,7 +1,7 @@
 # ArgoCD Application — agentgateway CRDs
 #
 # Installs only the agentgateway CRDs, separate from the agentgateway
-# controller chart (manifests/agentgateway.yaml). This guarantees the CRDs
+# controller chart (manifests/templates/agentgateway.yaml). This guarantees the CRDs
 # are established before anything uses them. Mirrors cert-manager-crds.
 #
 # Sync wave -3: CRDs only. agentgateway (wave 0) starts once this app is
@@ -11,7 +11,7 @@
 # bad sync must never remove them.
 #
 # The chart version here must match the targetRevision in
-# manifests/agentgateway.yaml.
+# manifests/templates/agentgateway.yaml.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

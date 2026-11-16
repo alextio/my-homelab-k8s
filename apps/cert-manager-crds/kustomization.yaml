@@ -1,6 +1,6 @@
 # cert-manager CRDs, pulled from the upstream release bundle.
 # Keep the version in step with the chart targetRevision in
-# manifests/cert-manager.yaml.
+# manifests/templates/cert-manager.yaml.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:

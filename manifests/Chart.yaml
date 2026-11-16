@@ -1,0 +1,7 @@
+# Renders templates/ (one Argo CD Application per service) for the root
+# Application in ../app-of-apps.yaml. Argo CD detects this file and runs
+# `helm template` instead of applying the directory as plain YAML.
+apiVersion: v2
+name: homelab-apps
+description: Argo CD Applications for every homelab service
+version: 0.1.0

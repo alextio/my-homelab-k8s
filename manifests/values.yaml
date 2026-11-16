@@ -1,0 +1,7 @@
+# Defaults are prod. A root Application for another cluster overrides these
+# with spec.source.helm.valuesObject.
+
+# Git revision every child Application reads from this repo (the `ref: values`
+# and `path: apps/<service>` sources). HEAD is the default branch, main.
+# A dev cluster sets this to the branch it is testing.
+revision: HEAD

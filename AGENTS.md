@@ -1,7 +1,16 @@
-- **`manifests/<service>.yaml`**: an Argo CD `Application` CR that points at the Helm chart (or raw manifests) and at my values.
+- **`manifests/templates/<service>.yaml`**: an Argo CD `Application` CR that points at the Helm chart (or raw manifests) and at my values.
 - **`apps/<service>/`**: the corresponding configuration the Application consumes, such as `values.yaml`, custom resources, and secrets templates.
 
 Deploying a service like MetalLB is a learning exercise, and its outcome is these two pieces: a correct Application CR in `manifests/` and matching configuration in `apps/`. Keep each step small and self-contained so it's clear what was learned.
+
+## Manifests are a Helm chart
+
+`manifests/` is a Helm chart: the root Application (`app-of-apps.yaml`) renders `manifests/templates/*.yaml` with `helm template`, so each cluster's root can pass different values. Defaults in `manifests/values.yaml` are prod.
+
+- Every source that points at this repo (the `ref: values` source and any `path: apps/<service>` source) uses `targetRevision: {{ .Values.revision }}`. Never hardcode `HEAD` or a branch name. **Why:** a dev cluster sets `revision` to the branch under test, and a hardcoded child would silently keep reading `main`.
+- Third-party charts keep their pinned `targetRevision`.
+- A literal `{{` in a template must be escaped as `{{ "{{" }}`.
+- Before committing, check the render with `helm template root manifests`.
 
 ## Sync waves
 

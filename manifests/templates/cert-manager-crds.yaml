@@ -12,7 +12,7 @@
 # kind, so a bad sync must never remove them.
 #
 # The CRD version lives in apps/cert-manager-crds/kustomization.yaml and
-# must match the chart targetRevision in manifests/cert-manager.yaml.
+# must match the chart targetRevision in manifests/templates/cert-manager.yaml.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -24,7 +24,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/alextio/my-homelab-k8s
-    targetRevision: HEAD
+    targetRevision: {{ .Values.revision }}
     path: apps/cert-manager-crds
   destination:
     server: https://kubernetes.default.svc

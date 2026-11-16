@@ -126,17 +126,20 @@ have no `Application` in `manifests/` yet, so Argo CD doesn't deploy them.
 ├── app-of-apps.yaml              # Root Application: points Argo CD at manifests/.
 │                                 # The only thing applied by hand.
 │
-├── manifests/                    # One Argo CD Application per service
-│   ├── gateway-api-crds.yaml
-│   ├── cert-manager-crds.yaml
-│   ├── cert-manager.yaml
-│   ├── metallb.yaml
-│   ├── external-secrets.yaml
-│   ├── traefik.yaml
-│   ├── kube-prometheus-stack.yaml
-│   ├── adguard-home.yaml
-│   ├── dex.yaml
-│   └── agentgateway.yaml
+├── manifests/                    # Helm chart the root Application renders
+│   ├── Chart.yaml
+│   ├── values.yaml               # Per-cluster settings (git revision); defaults are prod
+│   └── templates/                # One Argo CD Application per service
+│       ├── gateway-api-crds.yaml
+│       ├── cert-manager-crds.yaml
+│       ├── cert-manager.yaml
+│       ├── metallb.yaml
+│       ├── external-secrets.yaml
+│       ├── traefik.yaml
+│       ├── kube-prometheus-stack.yaml
+│       ├── adguard-home.yaml
+│       ├── dex.yaml
+│       └── agentgateway.yaml
 │
 ├── apps/                         # Config each Application consumes
 │   ├── cert-manager/             # values.yaml, self-signed + CA ClusterIssuers, root CA
@@ -287,8 +290,8 @@ This is the only manual `kubectl apply`. Everything after it comes from Git.
 kubectl apply -f app-of-apps.yaml
 ```
 
-The `root` Application syncs `manifests/` and creates one child
-`Application` per file in it.
+The `root` Application renders the Helm chart in `manifests/` and creates
+one child `Application` per file in `manifests/templates/`.
 
 ### 6. Watch the sync
 
@@ -340,13 +343,16 @@ kubectl -n monitoring get secret kube-prometheus-stack-grafana \
 
 ## Day-to-day
 
-- **Change a service:** edit `apps/<name>/` or `manifests/<name>.yaml`,
+- **Change a service:** edit `apps/<name>/` or `manifests/templates/<name>.yaml`,
   commit, push. Argo CD picks it up (default poll is ~3 minutes; click
   *Refresh* or run `argocd app get <name> --refresh` to go sooner).
-- **Add a service:** add `apps/<name>/` and `manifests/<name>.yaml`, pick a
+- **Add a service:** add `apps/<name>/` and `manifests/templates/<name>.yaml`, pick a
   sync wave from [AGENTS.md](AGENTS.md#sync-waves), and if it needs a fixed
   IP, claim one in the IP table first. Push.
-- **Remove a service:** delete `manifests/<name>.yaml`, push. `prune: true`
+  Sources that point at this repo use
+  `targetRevision: {{ .Values.revision }}`; see
+  [AGENTS.md](AGENTS.md#manifests-are-a-helm-chart).
+- **Remove a service:** delete `manifests/templates/<name>.yaml`, push. `prune: true`
   removes the Application and everything it manages.
 - **Don't `kubectl edit` managed resources.** `selfHeal: true` reverts
   manual changes to match Git.

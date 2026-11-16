@@ -15,10 +15,10 @@ spec:
         valueFiles:
           - $values/apps/metallb/values.yaml
     - repoURL: https://github.com/alextio/my-homelab-k8s
-      targetRevision: HEAD
+      targetRevision: {{ .Values.revision }}
       ref: values
-    - repoURL: https://github.com/alextio/my-homelab-k8s  
-      targetRevision: HEAD
+    - repoURL: https://github.com/alextio/my-homelab-k8s
+      targetRevision: {{ .Values.revision }}
       path: apps/metallb
       directory:
         recurse: true
