@@ -46,5 +46,13 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    # Waves only order creation; retry until earlier waves are up. See
+    # AGENTS.md "Sync waves".
+    retry:
+      limit: -1
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
     syncOptions:
       - CreateNamespace=true

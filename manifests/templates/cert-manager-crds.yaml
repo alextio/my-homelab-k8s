@@ -1,12 +1,12 @@
 # ArgoCD Application — cert-manager CRDs
 #
 # Installs only the cert-manager CRDs, separate from the cert-manager chart
-# (crds.enabled: false in apps/cert-manager/values.yaml). This guarantees
-# the CRDs are established before anything uses them. Mirrors
+# (crds.enabled: false in apps/cert-manager/values.yaml), so they are
+# created before anything uses them. Mirrors
 # gateway-api-crds.
 #
-# Sync wave -3: CRDs only. cert-manager (wave -2) starts once this app is
-# Healthy.
+# Sync wave -3: CRDs only. cert-manager (wave -2) and other users of these
+# CRDs retry their sync until the CRDs are established.
 #
 # prune: false — deleting a CRD deletes every Certificate/Issuer of that
 # kind, so a bad sync must never remove them.
@@ -30,5 +30,13 @@ spec:
     server: https://kubernetes.default.svc
   syncPolicy:
     automated: { prune: false, selfHeal: true }
+    # Waves only order creation; retry until earlier waves are up. See
+    # AGENTS.md "Sync waves".
+    retry:
+      limit: -1
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
     syncOptions:
       - ServerSideApply=true

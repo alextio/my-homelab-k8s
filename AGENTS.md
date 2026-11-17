@@ -14,16 +14,18 @@ Deploying a service like MetalLB is a learning exercise, and its outcome is thes
 
 ## Sync waves
 
-Single source of truth for ordering. Argo CD syncs lower waves first and waits for every Application in a wave to be Healthy before starting the next. Every `sync-wave` annotation in this repo must use a row below, with a comment pointing back here. Do not invent new numbers.
+Single source of truth for ordering. Root creates child Applications in wave order, but it does not wait for a wave to be Healthy before starting the next. Every `sync-wave` annotation in this repo must use a row below, with a comment pointing back here. Do not invent new numbers.
 
 | Wave | What | Applications |
 |------|------|--------------|
 | -3 | CRDs only | `gateway-api-crds`, `cert-manager-crds` |
-| -2 | Operators / controllers | `cert-manager`, `metallb`, `external-secrets` |
+| -2 | Operators / controllers | `argocd`, `cert-manager`, `metallb`, `external-secrets` |
 | -1 | Ingress (needs cert-manager issuers and MetalLB IPs) | `traefik` |
 | 0 | Workloads (default) | `kube-prometheus-stack`, `agentgateway` |
 
 **Why:** CRDs must be established before any custom resource that uses them, and Argo CD does not wait for a CRD to register within a single sync.
+
+Retries, not waits, make the ordering hold. Every child Application sets `syncPolicy.retry` (`limit: -1`, backoff 10s ×2 up to 5m), so a child whose CRDs or webhooks aren't up yet keeps retrying until they are. Copy that block into every new Application. Don't add an `argoproj.io_Application` health check to `argocd-cm`. **Why:** it makes root wait for each wave to be Healthy, so one app failing for reasons outside this repo (e.g. agentgateway) would block every later wave, including apps that don't depend on it.
 
 **Inside an Application** (resources under `apps/<name>/`): the Helm chart's own resources are wave 0 (the default), so resources that need the chart running (e.g. cert-manager's ClusterIssuers/Certificate, which need the webhook) are wave 1. Only add an in-app wave when a resource needs the chart up first, and say why in a comment on the annotation.
 

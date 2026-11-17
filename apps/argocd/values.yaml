@@ -1,0 +1,16 @@
+# Chart: argo/argo-cd (https://argoproj.github.io/argo-helm)
+# https://github.com/argoproj/argo-helm/blob/main/charts/argo-cd/values.yaml
+#
+# Started as a copy of the bootstrap values in 02-ansible
+# (playbooks/k3s-argocd/templates/argocd-values.yaml.j2) so the first sync
+# adopts the running install without changing it. From then on, this file is
+# the source of truth; the Ansible copy only matters for a fresh cluster.
+
+configs:
+  params:
+    # Serve plain HTTP; the UI is reached via `kubectl port-forward`, and any
+    # ingress in front of it would terminate TLS itself
+    server.insecure: true
+
+dex:
+  enabled: false

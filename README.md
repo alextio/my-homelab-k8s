@@ -62,7 +62,7 @@ to Git.
 
 | Component | Purpose | Namespace |
 |-----------|---------|-----------|
-| [Argo CD](https://argo-cd.readthedocs.io/) | GitOps: syncs this repo to the cluster (installed by the Ansible playbook) | `argocd` |
+| [Argo CD](https://argo-cd.readthedocs.io/) | GitOps: syncs this repo to the cluster (bootstrapped by the Ansible playbook, then manages itself via the `argocd` Application) | `argocd` |
 | [Gateway API CRDs](https://gateway-api.sigs.k8s.io/) | `Gateway` / `HTTPRoute` resource types | cluster-scoped |
 | [MetalLB](https://metallb.universe.tf/) | LoadBalancer IP allocation (L2/ARP mode) from `default-pool` | `metallb-system` |
 | [Traefik](https://traefik.io/) | Ingress via a shared Gateway API `Gateway`, TLS termination for `*.lan` | `traefik` |
@@ -171,14 +171,16 @@ Most Applications use the same three-source pattern:
 
 ## Sync Waves
 
-Children sync in order of their `argocd.argoproj.io/sync-wave` annotation.
-Argo CD waits for every Application in a wave to be Healthy before starting
-the next. The canonical table lives in [AGENTS.md](AGENTS.md#sync-waves).
+Children are created in order of their `argocd.argoproj.io/sync-wave`
+annotation, but root doesn't wait for a wave to be Healthy before starting
+the next, so one failing app never blocks unrelated ones. Instead, every
+child retries its sync with backoff until the CRDs and controllers it needs
+are up. The canonical table lives in [AGENTS.md](AGENTS.md#sync-waves).
 
 | Wave | What | Applications |
 |------|------|--------------|
 | -3 | CRDs only | `gateway-api-crds`, `cert-manager-crds` |
-| -2 | Operators / controllers | `cert-manager`, `metallb`, `external-secrets` |
+| -2 | Operators / controllers | `argocd`, `cert-manager`, `metallb`, `external-secrets` |
 | -1 | Ingress | `traefik` |
 | 0 | Workloads (default) | `kube-prometheus-stack`, `agentgateway`, `adguard-home`, `dex` |
 
@@ -397,5 +399,10 @@ same way to remove the workloads behind it:
 ```sh
 argocd app delete <name> --cascade
 ```
+
+Never cascade-delete the `argocd` Application: it manages Argo CD itself, so
+a cascade removes the controller doing the deleting. Delete it with
+`argocd app delete argocd --cascade=false` and remove Argo CD together with
+the cluster through the Ansible playbooks.
 
 Tearing down the cluster itself is done with the Ansible playbooks, not here.

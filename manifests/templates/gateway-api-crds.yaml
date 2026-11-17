@@ -1,7 +1,7 @@
 # ArgoCD Application — Gateway API CRDs
 #
 # Sync wave -3: CRDs only. Operators that serve Gateway/HTTPRoute resources
-# (wave -2 and later) start once this app is Healthy.
+# (wave -2 and later) retry their sync until these CRDs are established.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -19,5 +19,13 @@ spec:
     server: https://kubernetes.default.svc
   syncPolicy:
     automated: { prune: false, selfHeal: true }
+    # Waves only order creation; retry until earlier waves are up. See
+    # AGENTS.md "Sync waves".
+    retry:
+      limit: -1
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
     syncOptions:
       - ServerSideApply=true

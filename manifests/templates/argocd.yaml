@@ -1,0 +1,60 @@
+# ArgoCD Application — Argo CD itself
+#
+# Argo CD manages its own install. The Ansible k3s-argocd playbook installs
+# the chart once to bootstrap the cluster; after that, this Application owns
+# it, and upgrades and config changes go through Git.
+#
+# The name must stay `argocd`: Ansible installed the chart with release name
+# `argocd`, and the chart names resources after the release (argocd-server,
+# argocd-repo-server, ...). releaseName pins it explicitly so a different name
+# would never render a second copy alongside the bootstrapped one.
+#
+# No resources-finalizer: deleting this Application must never cascade, or
+# Argo CD deletes itself.
+#
+# Sync wave -2: controller.
+#
+# ServerSideApply is required: the ApplicationSet CRD is too large for the
+# last-applied-configuration annotation client-side apply writes.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd
+  namespace: argocd
+  annotations:
+    # See AGENTS.md "Sync waves".
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  project: default
+  sources:
+    # Source 1: The Argo CD Helm chart. Bootstrap installs whatever version
+    # 02-ansible pins (playbooks/k3s-argocd/vars.yml); this one wins after.
+    - repoURL: https://argoproj.github.io/argo-helm
+      chart: argo-cd
+      targetRevision: 10.11.6
+      helm:
+        releaseName: argocd
+        valueFiles:
+          - $values/apps/argocd/values.yaml
+    # Source 2: This repo, used only as a $values reference.
+    - repoURL: https://github.com/alextio/my-homelab-k8s
+      targetRevision: {{ .Values.revision }}
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    # Waves only order creation; retry until earlier waves are up. See
+    # AGENTS.md "Sync waves".
+    retry:
+      limit: -1
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
+    syncOptions:
+      - CreateNamespace=false
+      - ServerSideApply=true

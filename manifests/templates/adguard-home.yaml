@@ -6,7 +6,7 @@
 # The admin password comes from Bitwarden via apps/adguard-home/externalsecret.yaml
 # (needs external-secrets, wave -2, and its ClusterSecretStore).
 #
-# Wave 0 (workloads); needs metallb (-2) and traefik (-1) already synced.
+# Wave 0 (workloads); needs metallb (-2) and traefik (-1); retries until they are up.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -41,6 +41,14 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    # Waves only order creation; retry until earlier waves are up. See
+    # AGENTS.md "Sync waves".
+    retry:
+      limit: -1
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

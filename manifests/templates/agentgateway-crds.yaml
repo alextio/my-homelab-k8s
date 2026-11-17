@@ -1,11 +1,11 @@
 # ArgoCD Application — agentgateway CRDs
 #
 # Installs only the agentgateway CRDs, separate from the agentgateway
-# controller chart (manifests/templates/agentgateway.yaml). This guarantees the CRDs
-# are established before anything uses them. Mirrors cert-manager-crds.
+# controller chart (manifests/templates/agentgateway.yaml), so the CRDs
+# are created before anything uses them. Mirrors cert-manager-crds.
 #
-# Sync wave -3: CRDs only. agentgateway (wave 0) starts once this app is
-# Healthy.
+# Sync wave -3: CRDs only. agentgateway (wave 0) retries its sync until
+# these CRDs are established.
 #
 # prune: false — deleting a CRD deletes every resource of that kind, so a
 # bad sync must never remove them.
@@ -30,6 +30,14 @@ spec:
     namespace: agentgateway
   syncPolicy:
     automated: { prune: false, selfHeal: true }
+    # Waves only order creation; retry until earlier waves are up. See
+    # AGENTS.md "Sync waves".
+    retry:
+      limit: -1
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
