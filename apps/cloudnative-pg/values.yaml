@@ -1,0 +1,8 @@
+# Chart: cnpg/cloudnative-pg (https://cloudnative-pg.github.io/charts)
+#
+# Chart defaults are what we want: one operator replica watching all
+# namespaces, CRDs installed by the chart (see manifests/templates/cloudnative-pg.yaml
+# for why they aren't split into a *-crds app). Kept explicit here so the
+# choice is visible.
+crds:
+  create: true

@@ -1,0 +1,40 @@
+# Coder's database on the shared cluster: the role password (read by the
+# `coder` managed role in cluster.yaml) and the database it owns.
+#
+# The same Bitwarden entry feeds apps/coder/externalsecret.yaml, which builds
+# Coder's connection URL in the coder namespace. The entry uses the default
+# alnum format because the password goes into that URL unescaped.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: coder-db-role
+  namespace: postgres
+spec:
+  refreshPolicy: CreatedOnce
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: bitwarden
+  target:
+    name: coder-db-role
+    template:
+      type: kubernetes.io/basic-auth
+      data:
+        username: coder
+        password: "{{ .password }}"
+  data:
+    - secretKey: password
+      remoteRef:
+        key: e77c331e-0354-4e1f-8577-b504018b3f8b  # coder-postgres-password
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: coder
+  namespace: postgres
+spec:
+  cluster:
+    name: postgres
+  name: coder
+  owner: coder
+  # Removing this manifest leaves the database (and its data) in place.
+  databaseReclaimPolicy: retain

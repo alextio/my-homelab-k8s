@@ -21,9 +21,9 @@ Single source of truth for ordering. Root creates child Applications in wave ord
 | Wave | What | Applications |
 |------|------|--------------|
 | -3 | CRDs only | `gateway-api-crds`, `cert-manager-crds`, `agentgateway-crds` |
-| -2 | Operators / controllers | `argocd`, `cert-manager`, `metallb`, `external-secrets` |
-| -1 | Ingress (needs cert-manager issuers and MetalLB IPs) | `traefik` |
-| 0 | Workloads (default) | `kube-prometheus-stack`, `agentgateway`, `adguard-home`, `dex`, `immich` |
+| -2 | Operators / controllers | `argocd`, `cert-manager`, `metallb`, `external-secrets`, `cloudnative-pg` |
+| -1 | Shared infrastructure: ingress (needs cert-manager issuers and MetalLB IPs) and the shared database (needs the CNPG operator and ESO) | `traefik`, `postgres` |
+| 0 | Workloads (default) | `kube-prometheus-stack`, `agentgateway`, `adguard-home`, `dex`, `immich`, `coder` |
 
 **Why:** CRDs must be established before any custom resource that uses them, and Argo CD does not wait for a CRD to register within a single sync.
 
@@ -61,3 +61,16 @@ spec:
 ```
 
 To pull a changed value on demand, delete the target Secret and ESO recreates it from Bitwarden.
+
+## Shared PostgreSQL
+
+One CloudNativePG `Cluster`, `postgres` in namespace `postgres` (`apps/postgres/cluster.yaml`), serves every service. Don't enable a chart's bundled PostgreSQL subchart or add another `Cluster`; give the service a role and a database on the shared one instead. Connect to `postgres-rw.postgres.svc.cluster.local:5432` with `sslmode=require`.
+
+To add service `<svc>` (`apps/postgres/coder.yaml` is the worked example):
+
+1. Create one Bitwarden entry, `<svc>-postgres-password`, with the `bws-upsert-secret` skill (default `alnum` format, since the password goes into connection URLs unescaped).
+2. In `apps/postgres/cluster.yaml`, add a `spec.managed.roles` entry: `name: <svc>`, `login: true`, `passwordSecret.name: <svc>-db-role`.
+3. Add `apps/postgres/<svc>.yaml` with an `ExternalSecret` rendering `<svc>-db-role` (type `kubernetes.io/basic-auth`, keys `username` and `password`) and a `Database` (`owner: <svc>`, `databaseReclaimPolicy: retain`).
+4. In `apps/<svc>/`, add an `ExternalSecret` that reads the same Bitwarden entry and renders whatever the service needs (a URL, or host/user/password keys). Secrets can't be referenced across namespaces, so this second copy is required.
+
+Exception: Immich needs the VectorChord extension, which the standard CNPG image doesn't include, so it keeps its bundled database.

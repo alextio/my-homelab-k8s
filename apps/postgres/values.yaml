@@ -1,0 +1,4 @@
+# Intentionally empty: the postgres Application deploys plain manifests from
+# this directory (the CNPG Cluster plus per-service roles and databases), not
+# a Helm chart, so there are no values to set. Kept because every Application
+# has an apps/<service>/values.yaml (see AGENTS.md).

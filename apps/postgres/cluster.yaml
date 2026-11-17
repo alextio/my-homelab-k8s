@@ -1,0 +1,35 @@
+# The shared PostgreSQL cluster. Services connect to the read-write Service
+# CNPG creates: postgres-rw.postgres.svc.cluster.local:5432 (TLS on by
+# default, with a CNPG-issued server cert).
+#
+# One instance: a single-node k3s cluster gains nothing from replicas on the
+# same disk. No backups yet; that needs object storage for the Barman Cloud
+# plugin.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres
+  namespace: postgres
+spec:
+  instances: 1
+
+  # Pinned (the operator 1.30.1 default) so an operator upgrade with a newer
+  # default image can't start a major-version upgrade on its own. Bump this
+  # deliberately.
+  imageName: ghcr.io/cloudnative-pg/postgresql:18.6-system-trixie
+
+  storage:
+    # local-path (k3s default, reclaimPolicy Delete): data lives on the node's
+    # disk and goes away with the PVC.
+    size: 10Gi
+
+  # One role per service. CNPG creates and updates each role, reading its
+  # password from a kubernetes.io/basic-auth Secret in this namespace (see
+  # apps/postgres/<service>.yaml).
+  managed:
+    roles:
+      - name: coder
+        ensure: present
+        login: true
+        passwordSecret:
+          name: coder-db-role

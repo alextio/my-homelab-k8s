@@ -1,0 +1,58 @@
+# ArgoCD Application — Coder
+#
+# Self-hosted remote development environments, served through Traefik as
+# coder.lan (chart-rendered HTTPRoute). Its database is `coder` on the shared
+# CloudNativePG cluster (apps/postgres/coder.yaml); the connection URL comes
+# from Bitwarden via apps/coder/externalsecret.yaml.
+#
+# Wave 0 (workloads); needs postgres (-1) and traefik (-1). Neither is waited
+# on: the sync retries until the Gateway exists, and the pod restarts until
+# Postgres accepts connections.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: coder
+  namespace: argocd
+  annotations:
+    # See AGENTS.md "Sync waves".
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  sources:
+    # Source 1: The Coder Helm chart
+    - repoURL: https://helm.coder.com/v2
+      chart: coder
+      targetRevision: 2.39.4
+      helm:
+        valueFiles:
+          - $values/apps/coder/values.yaml
+    # Source 2: This repo, used only as a $values reference.
+    - repoURL: https://github.com/alextio/my-homelab-k8s
+      targetRevision: {{ .Values.revision }}
+      ref: values
+    # Source 3: This repo, providing the ExternalSecret in apps/coder/
+    # (values.yaml is excluded since Source 1 consumes it).
+    - repoURL: https://github.com/alextio/my-homelab-k8s
+      targetRevision: {{ .Values.revision }}
+      path: apps/coder
+      directory:
+        recurse: true
+        exclude: 'values.yaml'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: coder
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    # Waves only order creation; retry until earlier waves are up. See
+    # AGENTS.md "Sync waves".
+    retry:
+      limit: -1
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

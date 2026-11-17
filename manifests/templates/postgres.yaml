@@ -1,0 +1,46 @@
+# ArgoCD Application — shared PostgreSQL
+#
+# One CloudNativePG Cluster (postgres/postgres) that every service uses.
+# Each service gets its own role and database here, not its own Postgres:
+# see AGENTS.md "Shared PostgreSQL" for how to add one.
+#
+# Wave -1: needs the cloudnative-pg operator (-2) and external-secrets (-2,
+# for the role passwords); retries its sync until their CRDs exist. Wave 0
+# apps (coder, ...) don't wait for Postgres to be ready: their pods restart
+# until it accepts connections.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: postgres
+  namespace: argocd
+  annotations:
+    # See AGENTS.md "Sync waves".
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/alextio/my-homelab-k8s
+    targetRevision: {{ .Values.revision }}
+    path: apps/postgres
+    directory:
+      recurse: true
+      # values.yaml is only the per-app placeholder (see AGENTS.md).
+      exclude: 'values.yaml'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: postgres
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    # Waves only order creation; retry until earlier waves are up. See
+    # AGENTS.md "Sync waves".
+    retry:
+      limit: -1
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

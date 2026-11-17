@@ -68,6 +68,7 @@ to Git.
 | [Traefik](https://traefik.io/) | Ingress via a shared Gateway API `Gateway`, TLS termination for `*.lan` | `traefik` |
 | [cert-manager](https://cert-manager.io/) | Self-signed homelab root CA and the `homelab-ca` ClusterIssuer | `cert-manager` |
 | [External Secrets Operator](https://external-secrets.io/) | Renders Kubernetes Secrets from Bitwarden Secrets Manager | `external-secrets` |
+| [CloudNativePG](https://cloudnative-pg.io/) | PostgreSQL operator, plus the one shared `postgres` cluster every service uses | `cnpg-system`, `postgres` |
 
 > **Why these choices?**
 > - **Gateway API over `Ingress`**: Traefik serves one shared `Gateway`
@@ -111,6 +112,7 @@ router's DHCP range. The source of truth is the table in
 | [AdGuard Home](https://adguard.com/adguard-home/overview.html) | Network-wide DNS filtering | `adguard-home` | `adguard.lan` (DNS on `192.168.6.201`) |
 | [Dex](https://dexidp.io/) | OIDC identity provider | `dex` | `dex.lan` |
 | [agentgateway](https://agentgateway.dev/) | AI/LLM gateway (Claude and OpenRouter backends) | `agentgateway` | n/a |
+| [Coder](https://coder.com/) | Remote development environments (database on the shared Postgres) | `coder` | `coder.lan` |
 | [Immich](https://immich.app/) | Photo and video library (own bundled Postgres with VectorChord; machine learning off) | `immich` | `immich.lan`, `im.lan` |
 
 The Traefik dashboard is at `traefik.lan/dashboard/`.
@@ -139,12 +141,15 @@ have no `Application` in `manifests/` yet, so Argo CD doesn't deploy them.
 │       ├── cert-manager.yaml
 │       ├── metallb.yaml
 │       ├── external-secrets.yaml
+│       ├── cloudnative-pg.yaml
 │       ├── traefik.yaml
+│       ├── postgres.yaml
 │       ├── kube-prometheus-stack.yaml
 │       ├── adguard-home.yaml
 │       ├── dex.yaml
 │       ├── agentgateway.yaml
-│       └── immich.yaml
+│       ├── immich.yaml
+│       └── coder.yaml
 │
 ├── apps/                         # Config each Application consumes
 │   ├── argocd/                   # values.yaml (Argo CD manages its own install)
@@ -152,12 +157,15 @@ have no `Application` in `manifests/` yet, so Argo CD doesn't deploy them.
 │   ├── cert-manager-crds/        # Kustomization pinning the CRD version
 │   ├── metallb/                  # values.yaml, IPAddressPool, L2Advertisement
 │   ├── external-secrets/         # values.yaml, Bitwarden ClusterSecretStore, sdk-server cert
+│   ├── cloudnative-pg/           # values.yaml for the CNPG operator
 │   ├── traefik/                  # values.yaml, shared Gateway, *.lan wildcard cert, dashboard
+│   ├── postgres/                 # Shared CNPG Cluster, plus a role + Database per service
 │   ├── kube-prometheus-stack/    # values.yaml, HTTPRoutes, Grafana dashboards
 │   ├── adguard-home/             # values.yaml, ConfigMap, ExternalSecret
 │   ├── dex/                      # values.yaml, HTTPRoute, ExternalSecret
 │   ├── agentgateway/             # Gateway, LLM backends, OTel collector
 │   ├── immich/                   # values.yaml, ExternalSecret (bundled Postgres + Valkey)
+│   ├── coder/                    # values.yaml, ExternalSecret (DB URL for shared Postgres)
 │   └── <service>/                # Add new services here
 │
 ├── .journey/                     # Write-ups of each service as it was set up
@@ -187,9 +195,9 @@ are up. The canonical table lives in [AGENTS.md](AGENTS.md#sync-waves).
 | Wave | What | Applications |
 |------|------|--------------|
 | -3 | CRDs only | `gateway-api-crds`, `cert-manager-crds`, `agentgateway-crds` |
-| -2 | Operators / controllers | `argocd`, `cert-manager`, `metallb`, `external-secrets` |
-| -1 | Ingress | `traefik` |
-| 0 | Workloads (default) | `kube-prometheus-stack`, `agentgateway`, `adguard-home`, `dex`, `immich` |
+| -2 | Operators / controllers | `argocd`, `cert-manager`, `metallb`, `external-secrets`, `cloudnative-pg` |
+| -1 | Shared infrastructure | `traefik`, `postgres` |
+| 0 | Workloads (default) | `kube-prometheus-stack`, `agentgateway`, `adguard-home`, `dex`, `immich`, `coder` |
 
 Inside an Application, the chart's own resources are wave 0. Resources that
 need the chart running first, such as cert-manager's ClusterIssuers or ESO's

@@ -1,0 +1,53 @@
+# ArgoCD Application — CloudNativePG operator
+#
+# Runs PostgreSQL clusters from Cluster / Database custom resources. The
+# shared database itself lives in the `postgres` Application
+# (manifests/templates/postgres.yaml); this app only installs the operator.
+#
+# Sync wave -2: operator. Its CRDs ship in the chart (crds.create: true)
+# rather than a separate *-crds app: nothing in this app uses them, and the
+# first Cluster is in `postgres` (wave -1), which retries its sync until
+# these CRDs are established.
+#
+# ServerSideApply is required: the CRDs are too large for the
+# last-applied-configuration annotation client-side apply writes.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cloudnative-pg
+  namespace: argocd
+  annotations:
+    # See AGENTS.md "Sync waves".
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  project: default
+  sources:
+    # Source 1: The CloudNativePG operator Helm chart (operator 1.30.1)
+    - repoURL: https://cloudnative-pg.github.io/charts
+      chart: cloudnative-pg
+      targetRevision: 0.29.1
+      helm:
+        valueFiles:
+          - $values/apps/cloudnative-pg/values.yaml
+    # Source 2: This repo, used only as a $values reference.
+    - repoURL: https://github.com/alextio/my-homelab-k8s
+      targetRevision: {{ .Values.revision }}
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cnpg-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    # Waves only order creation; retry until earlier waves are up. See
+    # AGENTS.md "Sync waves".
+    retry:
+      limit: -1
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

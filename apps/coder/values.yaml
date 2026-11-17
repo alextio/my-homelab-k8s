@@ -1,0 +1,35 @@
+# Chart: coder-v2/coder (https://helm.coder.com/v2)
+# Coder is configured almost entirely through CODER_* environment variables.
+coder:
+  env:
+    # Built by apps/coder/externalsecret.yaml; points at the shared
+    # CloudNativePG cluster (postgres-rw.postgres).
+    - name: CODER_PG_CONNECTION_URL
+      valueFrom:
+        secretKeyRef:
+          name: coder-db-url
+          key: url
+    # The URL users and workspace agents reach Coder on. Setting it also
+    # stops the chart defaulting it to the in-cluster Service URL
+    # (envUseClusterAccessURL).
+    - name: CODER_ACCESS_URL
+      value: https://coder.lan
+    # No CODER_WILDCARD_ACCESS_URL yet: workspace apps are served on paths
+    # under coder.lan. A subdomain wildcard needs a matching TLS cert and DNS
+    # (*.coder.lan isn't covered by the *.lan wildcard).
+
+  service:
+    # Chart default is LoadBalancer, which would take a MetalLB IP. Traffic
+    # comes through the Traefik Gateway instead.
+    type: ClusterIP
+
+  # Chart-rendered HTTPRoute on the shared Traefik Gateway. DNS (*.lan ->
+  # Traefik) and TLS (*.lan wildcard cert) already cover coder.lan; Coder
+  # itself serves plain HTTP behind it.
+  httproute:
+    enable: true
+    host: coder.lan
+    parentRefs:
+      - name: traefik
+        namespace: traefik
+        sectionName: websecure
