@@ -19,6 +19,7 @@ metadata:
   name: cert-manager-crds
   namespace: argocd
   annotations:
+    # See AGENTS.md "Sync waves".
     argocd.argoproj.io/sync-wave: "-3"
 spec:
   project: default

@@ -8,6 +8,7 @@ metadata:
   name: gateway-api-crds
   namespace: argocd
   annotations:
+    # See AGENTS.md "Sync waves".
     argocd.argoproj.io/sync-wave: "-3"
 spec:
   project: default

@@ -4,7 +4,8 @@ metadata:
   name: metallb
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "-2"  # operator
+    # See AGENTS.md "Sync waves".
+    argocd.argoproj.io/sync-wave: "-2"
 spec:
   project: default
   sources:

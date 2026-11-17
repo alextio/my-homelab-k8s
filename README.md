@@ -98,7 +98,8 @@ router's DHCP range. The source of truth is the table in
 |----|---------|
 | `192.168.6.200` | Traefik: HTTP/HTTPS for every `*.lan` host |
 | `192.168.6.201` | AdGuard Home: DNS on 53 TCP/UDP (bypasses Traefik) |
-| `192.168.6.202`–`210` | free |
+| `192.168.6.202` | agentgateway: HTTPS 443 as `agentgateway.lan` (own cert, bypasses Traefik), HTTP 8080 |
+| `192.168.6.203`–`210` | free |
 
 ---
 
@@ -109,7 +110,7 @@ router's DHCP range. The source of truth is the table in
 | [kube-prometheus-stack](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack) | Prometheus, Grafana, Alertmanager, node-exporter, kube-state-metrics | `monitoring` | `grafana.lan`, `prometheus.lan` |
 | [AdGuard Home](https://adguard.com/adguard-home/overview.html) | Network-wide DNS filtering | `adguard-home` | `adguard.lan` (DNS on `192.168.6.201`) |
 | [Dex](https://dexidp.io/) | OIDC identity provider | `dex` | `dex.lan` |
-| [agentgateway](https://agentgateway.dev/) | AI/LLM gateway (Claude and OpenRouter backends) | `agentgateway-system` | n/a |
+| [agentgateway](https://agentgateway.dev/) | AI/LLM gateway (Claude and OpenRouter backends) | `agentgateway` | n/a |
 
 The Traefik dashboard is at `traefik.lan/dashboard/`.
 
@@ -132,6 +133,8 @@ have no `Application` in `manifests/` yet, so Argo CD doesn't deploy them.
 │   └── templates/                # One Argo CD Application per service
 │       ├── gateway-api-crds.yaml
 │       ├── cert-manager-crds.yaml
+│       ├── agentgateway-crds.yaml
+│       ├── argocd.yaml
 │       ├── cert-manager.yaml
 │       ├── metallb.yaml
 │       ├── external-secrets.yaml
@@ -142,6 +145,7 @@ have no `Application` in `manifests/` yet, so Argo CD doesn't deploy them.
 │       └── agentgateway.yaml
 │
 ├── apps/                         # Config each Application consumes
+│   ├── argocd/                   # values.yaml (Argo CD manages its own install)
 │   ├── cert-manager/             # values.yaml, self-signed + CA ClusterIssuers, root CA
 │   ├── cert-manager-crds/        # Kustomization pinning the CRD version
 │   ├── metallb/                  # values.yaml, IPAddressPool, L2Advertisement
@@ -156,7 +160,7 @@ have no `Application` in `manifests/` yet, so Argo CD doesn't deploy them.
 ├── .journey/                     # Write-ups of each service as it was set up
 ├── .claude/skills/               # Agent skills (e.g. bws-upsert-secret)
 ├── AGENTS.md                     # Conventions: sync waves, IPs, ExternalSecrets
-└── README                        # You are here
+└── README.md                     # You are here
 ```
 
 Most Applications use the same three-source pattern:
@@ -179,7 +183,7 @@ are up. The canonical table lives in [AGENTS.md](AGENTS.md#sync-waves).
 
 | Wave | What | Applications |
 |------|------|--------------|
-| -3 | CRDs only | `gateway-api-crds`, `cert-manager-crds` |
+| -3 | CRDs only | `gateway-api-crds`, `cert-manager-crds`, `agentgateway-crds` |
 | -2 | Operators / controllers | `argocd`, `cert-manager`, `metallb`, `external-secrets` |
 | -1 | Ingress | `traefik` |
 | 0 | Workloads (default) | `kube-prometheus-stack`, `agentgateway`, `adguard-home`, `dex` |
@@ -304,8 +308,9 @@ argocd app list
 argocd app get <name>
 ```
 
-All of them should end up `Synced` / `Healthy`, in the order shown in
-[Sync Waves](#sync-waves).
+All of them should end up `Synced` / `Healthy`. They are created in the order
+shown in [Sync Waves](#sync-waves); on a fresh cluster, later waves fail
+and retry for a few minutes until the CRDs and controllers they need are up.
 
 ### 7. Verify the services
 

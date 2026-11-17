@@ -1,6 +1,8 @@
 - **`manifests/templates/<service>.yaml`**: an Argo CD `Application` CR that points at the Helm chart (or raw manifests) and at my values.
 - **`apps/<service>/`**: the corresponding configuration the Application consumes, such as `values.yaml`, custom resources, and secrets templates.
 
+**Every Application has an `apps/<service>/values.yaml`**, even if it is empty. When empty, leave a comment saying so and why. This applies to every new Application and manifest. Exception: Applications named `*-crds` don't need one. Argo CD installs all operators and CRDs; nothing is installed by hand with `helm`.
+
 Deploying a service like MetalLB is a learning exercise, and its outcome is these two pieces: a correct Application CR in `manifests/` and matching configuration in `apps/`. Keep each step small and self-contained so it's clear what was learned.
 
 ## Manifests are a Helm chart
@@ -18,10 +20,10 @@ Single source of truth for ordering. Root creates child Applications in wave ord
 
 | Wave | What | Applications |
 |------|------|--------------|
-| -3 | CRDs only | `gateway-api-crds`, `cert-manager-crds` |
+| -3 | CRDs only | `gateway-api-crds`, `cert-manager-crds`, `agentgateway-crds` |
 | -2 | Operators / controllers | `argocd`, `cert-manager`, `metallb`, `external-secrets` |
 | -1 | Ingress (needs cert-manager issuers and MetalLB IPs) | `traefik` |
-| 0 | Workloads (default) | `kube-prometheus-stack`, `agentgateway` |
+| 0 | Workloads (default) | `kube-prometheus-stack`, `agentgateway`, `adguard-home` |
 
 **Why:** CRDs must be established before any custom resource that uses them, and Argo CD does not wait for a CRD to register within a single sync.
 
@@ -39,7 +41,8 @@ MetalLB pool `default-pool` covers `192.168.6.200`–`192.168.6.210`. It must st
 |----|---------|-------|------------|
 | 192.168.6.200 | Traefik | HTTP/HTTPS ingress for all `*.lan` hosts (incl. `adguard.lan`) | `apps/traefik/values.yaml` |
 | 192.168.6.201 | AdGuard Home | DNS 53 TCP/UDP, bypasses Traefik; dashboard goes through Traefik | `apps/adguard-home/values.yaml` |
-| 192.168.6.202–210 | free | still in `default-pool` | `apps/metallb/default-pool.yaml` |
+| 192.168.6.202 | agentgateway | AI/LLM gateway proxy, HTTPS 443 as `agentgateway.lan` (own cert, bypasses Traefik), HTTP 8080 | `apps/agentgateway/gateway.yaml` |
+| 192.168.6.203–210 | free | still in `default-pool` | `apps/metallb/default-pool.yaml` |
 
 Not verified from the cluster: whether non-cluster devices (DHCP leases, Proxmox VMs/LXCs) hold any address in this range.
 

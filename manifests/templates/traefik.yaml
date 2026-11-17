@@ -13,6 +13,7 @@ metadata:
   name: traefik
   namespace: argocd
   annotations:
+    # See AGENTS.md "Sync waves".
     argocd.argoproj.io/sync-wave: "-1"
 spec:
   project: default
