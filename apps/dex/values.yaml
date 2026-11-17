@@ -1,0 +1,6 @@
+# The Dex config (issuer, static user, clients) is NOT here: it contains the
+# password hash and client secret, so externalsecret.yaml renders it into the
+# dex-config Secret from Bitwarden. The chart just mounts that Secret.
+configSecret:
+  create: false
+  name: dex-config

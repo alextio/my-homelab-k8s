@@ -23,7 +23,7 @@ Single source of truth for ordering. Root creates child Applications in wave ord
 | -3 | CRDs only | `gateway-api-crds`, `cert-manager-crds`, `agentgateway-crds` |
 | -2 | Operators / controllers | `argocd`, `cert-manager`, `metallb`, `external-secrets` |
 | -1 | Ingress (needs cert-manager issuers and MetalLB IPs) | `traefik` |
-| 0 | Workloads (default) | `kube-prometheus-stack`, `agentgateway`, `adguard-home` |
+| 0 | Workloads (default) | `kube-prometheus-stack`, `agentgateway`, `adguard-home`, `dex` |
 
 **Why:** CRDs must be established before any custom resource that uses them, and Argo CD does not wait for a CRD to register within a single sync.
 
