@@ -1,0 +1,49 @@
+# Chart: helmforge/immich (https://repo.helmforge.dev)
+# Bundles Immich server, PostgreSQL (VectorChord image) and Redis (aliased
+# as valkey). Credentials come from Bitwarden via externalsecret.yaml.
+
+# Stable resource names (immich, immich-postgresql, immich-valkey-client),
+# independent of the Argo release name.
+fullnameOverride: immich
+
+server:
+  # Pairs with machineLearning.enabled=false below: stops the server calling
+  # the (absent) ML service and queueing jobs that would only fail.
+  extraEnv:
+    - name: IMMICH_MACHINE_LEARNING_ENABLED
+      value: "false"
+  persistence:
+    # local-path (k3s default, reclaimPolicy Delete): the library lives on the
+    # node's disk and is removed with the PVC. Fine to start; move to
+    # dedicated storage before relying on it.
+    size: 50Gi
+
+# Disabled for now: no face recognition, smart search or duplicate
+# detection. Saves ~0.5-2Gi RAM and a 10Gi model-cache PVC. The server
+# still runs; those features just stay off until this is re-enabled.
+machineLearning:
+  enabled: false
+
+# Passwords are pinned to the immich-credentials Secret. Left empty, the
+# subcharts generate them with randAlphaNum + lookup, but Argo CD renders
+# without cluster access, so every sync would produce a new password while
+# Postgres keeps the one it was initialised with.
+postgresql:
+  auth:
+    existingSecret: immich-credentials
+
+valkey:
+  auth:
+    existingSecret: immich-credentials
+
+# Chart-rendered HTTPRoute on the shared Traefik Gateway. DNS (*.lan ->
+# Traefik) and TLS (*.lan wildcard cert) already cover both hostnames.
+gateway:
+  enabled: true
+  parentRefs:
+    - name: traefik
+      namespace: traefik
+      sectionName: websecure
+  hostnames:
+    - immich.lan
+    - im.lan

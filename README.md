@@ -111,10 +111,11 @@ router's DHCP range. The source of truth is the table in
 | [AdGuard Home](https://adguard.com/adguard-home/overview.html) | Network-wide DNS filtering | `adguard-home` | `adguard.lan` (DNS on `192.168.6.201`) |
 | [Dex](https://dexidp.io/) | OIDC identity provider | `dex` | `dex.lan` |
 | [agentgateway](https://agentgateway.dev/) | AI/LLM gateway (Claude and OpenRouter backends) | `agentgateway` | n/a |
+| [Immich](https://immich.app/) | Photo and video library (own bundled Postgres with VectorChord; machine learning off) | `immich` | `immich.lan`, `im.lan` |
 
 The Traefik dashboard is at `traefik.lan/dashboard/`.
 
-`apps/` also holds staged config for `homepage`, `immich` and `langfuse`. They
+`apps/` also holds staged config for `homepage`, `langfuse` and `leantime`. They
 have no `Application` in `manifests/` yet, so Argo CD doesn't deploy them.
 
 ---
@@ -142,7 +143,8 @@ have no `Application` in `manifests/` yet, so Argo CD doesn't deploy them.
 │       ├── kube-prometheus-stack.yaml
 │       ├── adguard-home.yaml
 │       ├── dex.yaml
-│       └── agentgateway.yaml
+│       ├── agentgateway.yaml
+│       └── immich.yaml
 │
 ├── apps/                         # Config each Application consumes
 │   ├── argocd/                   # values.yaml (Argo CD manages its own install)
@@ -155,6 +157,7 @@ have no `Application` in `manifests/` yet, so Argo CD doesn't deploy them.
 │   ├── adguard-home/             # values.yaml, ConfigMap, ExternalSecret
 │   ├── dex/                      # values.yaml, HTTPRoute, ExternalSecret
 │   ├── agentgateway/             # Gateway, LLM backends, OTel collector
+│   ├── immich/                   # values.yaml, ExternalSecret (bundled Postgres + Valkey)
 │   └── <service>/                # Add new services here
 │
 ├── .journey/                     # Write-ups of each service as it was set up
@@ -186,7 +189,7 @@ are up. The canonical table lives in [AGENTS.md](AGENTS.md#sync-waves).
 | -3 | CRDs only | `gateway-api-crds`, `cert-manager-crds`, `agentgateway-crds` |
 | -2 | Operators / controllers | `argocd`, `cert-manager`, `metallb`, `external-secrets` |
 | -1 | Ingress | `traefik` |
-| 0 | Workloads (default) | `kube-prometheus-stack`, `agentgateway`, `adguard-home`, `dex` |
+| 0 | Workloads (default) | `kube-prometheus-stack`, `agentgateway`, `adguard-home`, `dex`, `immich` |
 
 Inside an Application, the chart's own resources are wave 0. Resources that
 need the chart running first, such as cert-manager's ClusterIssuers or ESO's

@@ -1,0 +1,57 @@
+# ArgoCD Application — Immich
+#
+# Self-hosted photo/video library. Served through Traefik as immich.lan and
+# im.lan (HTTPRoute rendered by the chart). Machine learning is disabled for
+# now (see apps/immich/values.yaml).
+# DB/cache passwords come from Bitwarden via apps/immich/externalsecret.yaml
+# (needs external-secrets, wave -2, and its ClusterSecretStore).
+#
+# Wave 0 (workloads); needs traefik (-1); retries until it is up.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: immich
+  namespace: argocd
+  annotations:
+    # See AGENTS.md "Sync waves".
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  sources:
+    # Source 1: The Immich Helm chart
+    - repoURL: https://repo.helmforge.dev
+      chart: immich
+      targetRevision: 1.2.16
+      helm:
+        valueFiles:
+          - $values/apps/immich/values.yaml
+    # Source 2: This repo, used only as a $values reference.
+    - repoURL: https://github.com/alextio/my-homelab-k8s
+      targetRevision: {{ .Values.revision }}
+      ref: values
+    # Source 3: This repo, providing the ExternalSecret in apps/immich/
+    # (values.yaml is excluded since Source 1 consumes it).
+    - repoURL: https://github.com/alextio/my-homelab-k8s
+      targetRevision: {{ .Values.revision }}
+      path: apps/immich
+      directory:
+        recurse: true
+        exclude: 'values.yaml'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: immich
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    # Waves only order creation; retry until earlier waves are up. See
+    # AGENTS.md "Sync waves".
+    retry:
+      limit: -1
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
