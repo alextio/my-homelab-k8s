@@ -19,6 +19,25 @@ spec:
   hostnames:
     - prometheus.lan
   rules:
-    - backendRefs:
+    # Login callback and sign-out go straight to oauth2-proxy, so its cookie
+    # is set on prometheus.lan (allowed by apps/oauth2-proxy/referencegrant.yaml).
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /oauth2/
+      backendRefs:
+        - name: oauth2-proxy
+          namespace: oauth2-proxy
+          port: 80
+    # Prometheus has no login of its own; require Dex login
+    # (middleware-oauth2-proxy.yaml). Grafana queries Prometheus through its
+    # Service, not this route, so it isn't affected.
+    - filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: oauth2-proxy
+      backendRefs:
         - name: kube-prometheus-stack-prometheus
           port: 9090

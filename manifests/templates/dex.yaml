@@ -1,7 +1,11 @@
 # ArgoCD Application — Dex
 #
-# OIDC identity provider. First consumer is Eclipse Che (login + the
-# Kubernetes API server trusting its tokens, see apps/dex/values.yaml).
+# OIDC identity provider for Argo CD, Coder, Grafana and Immich (native
+# OIDC), and for oauth2-proxy, which gates the services without OIDC
+# support. Clients are registered in apps/dex/externalsecret.yaml.
+#
+# apps/dex/ also holds the kube-system/coredns-custom ConfigMap that lets
+# pods resolve dex.lan.
 #
 # Wave 0 (workloads). The ExternalSecret in apps/dex/ is also wave 0: the
 # Dex pod will wait on the dex-config Secret and start once ESO writes it.

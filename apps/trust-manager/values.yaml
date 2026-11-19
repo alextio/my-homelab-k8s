@@ -1,0 +1,6 @@
+# Chart: jetstack/trust-manager (https://charts.jetstack.io)
+#
+# Intentionally empty: the chart defaults are what we need. The trust
+# namespace is cert-manager (where the homelab-root-ca Secret lives), the
+# webhook cert comes from cert-manager, and Secret targets stay off since
+# bundle-homelab-root-ca.yaml only writes ConfigMaps (a CA cert isn't secret).

@@ -23,12 +23,7 @@ service:
     # Keeps the real client IP (per-client stats/filtering) and skips SNAT.
     externalTrafficPolicy: Local
 
-# Chart-rendered HTTPRoute for adguard.lan on the shared Traefik Gateway.
+# The adguard.lan HTTPRoute is httproute.yaml, not the chart's: the chart's
+# route can't take the Dex login (oauth2-proxy) filter.
 gateway:
-  enabled: true
-  parentRefs:
-    - name: traefik
-      namespace: traefik
-      sectionName: websecure
-  hostnames:
-    - adguard.lan
+  enabled: false

@@ -110,12 +110,14 @@ router's DHCP range. The source of truth is the table in
 |-------------|---------|-----------|-----|
 | [kube-prometheus-stack](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack) | Prometheus, Grafana, Alertmanager, node-exporter, kube-state-metrics | `monitoring` | `grafana.lan`, `prometheus.lan` |
 | [AdGuard Home](https://adguard.com/adguard-home/overview.html) | Network-wide DNS filtering | `adguard-home` | `adguard.lan` (DNS on `192.168.6.201`) |
-| [Dex](https://dexidp.io/) | OIDC identity provider | `dex` | `dex.lan` |
+| [Dex](https://dexidp.io/) | OIDC identity provider: single sign-on for Argo CD, Coder, Grafana, Immich, and (via oauth2-proxy) Prometheus, AdGuard Home and the Traefik dashboard | `dex` | `dex.lan` |
+| [oauth2-proxy](https://oauth2-proxy.github.io/oauth2-proxy/) | Dex login in front of services with no OIDC support (Traefik forwardAuth) | `oauth2-proxy` | n/a |
+| [trust-manager](https://cert-manager.io/docs/trust/trust-manager/) | Copies the homelab root CA into a `homelab-root-ca` ConfigMap in every namespace | `cert-manager` | n/a |
 | [agentgateway](https://agentgateway.dev/) | AI/LLM gateway (Claude and OpenRouter backends) | `agentgateway` | n/a |
 | [Coder](https://coder.com/) | Remote development environments (database on the shared Postgres) | `coder` | `coder.lan` |
 | [Immich](https://immich.app/) | Photo and video library (own bundled Postgres with VectorChord; machine learning off) | `immich` | `immich.lan`, `im.lan` |
 
-The Traefik dashboard is at `traefik.lan/dashboard/`.
+The Traefik dashboard is at `traefik.lan/dashboard/`. Argo CD is at `argocd.lan`.
 
 `apps/` also holds staged config for `homepage`, `langfuse` and `leantime`. They
 have no `Application` in `manifests/` yet, so Argo CD doesn't deploy them.

@@ -1,0 +1,37 @@
+# adguard.lan on the shared Traefik Gateway. Replaces the chart-rendered route
+# (gateway.enabled is off in values.yaml) because that one can't take filters.
+#
+# Dex login (via oauth2-proxy) sits in front of AdGuard's own login. AdGuard
+# can't take the identity from a header, so its password prompt stays.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: adguard-home
+  namespace: adguard-home
+spec:
+  parentRefs:
+    - name: traefik
+      namespace: traefik
+      sectionName: websecure
+  hostnames:
+    - adguard.lan
+  rules:
+    # Login callback and sign-out go straight to oauth2-proxy, so its cookie
+    # is set on adguard.lan (allowed by apps/oauth2-proxy/referencegrant.yaml).
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /oauth2/
+      backendRefs:
+        - name: oauth2-proxy
+          namespace: oauth2-proxy
+          port: 80
+    - filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: oauth2-proxy
+      backendRefs:
+        - name: adguard-home-web
+          port: 80

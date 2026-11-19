@@ -1,0 +1,64 @@
+# Chart: oauth2-proxy/oauth2-proxy (https://oauth2-proxy.github.io/manifests)
+#
+# Single sign-on through Dex for services with no OIDC support of their own:
+# Prometheus, the Traefik dashboard and the AdGuard Home UI. It doesn't proxy
+# their traffic. Traefik asks it about each request (a forwardAuth
+# Middleware), and it answers 202 (logged in, let it through) or redirects
+# the browser to Dex.
+#
+# Each protected host also routes /oauth2/* straight here (see the
+# HTTPRoutes/IngressRoute), so the login callback and the session cookie stay
+# on that host. That avoids a cookie shared across .lan, which browsers
+# reject because .lan looks like a top-level domain.
+#
+# To protect another service:
+#   1. Add https://<host>/oauth2/callback to the oauth2-proxy client's
+#      redirectURIs in apps/dex/externalsecret.yaml.
+#   2. In the service's namespace, add a forwardAuth Middleware (copy
+#      apps/kube-prometheus-stack/middleware-oauth2-proxy.yaml).
+#   3. In its HTTPRoute, add the /oauth2/ rule and the ExtensionRef filter
+#      (copy apps/kube-prometheus-stack/httproute-prometheus.yaml), and allow
+#      that namespace in referencegrant.yaml.
+
+# Stable Service name (oauth2-proxy.oauth2-proxy:80) for the Middlewares,
+# independent of the Argo release name.
+fullnameOverride: oauth2-proxy
+
+config:
+  # client-id, client-secret and cookie-secret keys, written by
+  # externalsecret.yaml.
+  existingSecret: oauth2-proxy
+  configFile: |-
+    provider = "oidc"
+    provider_display_name = "Dex"
+    oidc_issuer_url = "https://dex.lan"
+    # The homelab CA, mounted below.
+    provider_ca_files = ["/etc/homelab-root-ca/ca.crt"]
+    scope = "openid profile email"
+    # Who may log in is decided by Dex (only its users can sign in), so
+    # don't filter again by email domain.
+    email_domains = ["*"]
+    # Auth-only mode: nothing is proxied. A logged-in request gets 202,
+    # which Traefik's forwardAuth treats as "allow".
+    upstreams = ["static://202"]
+    # Behind Traefik: read the original host/scheme/path from the
+    # X-Forwarded-* headers, so the callback URL and the post-login redirect
+    # use the protected host (e.g. https://prometheus.lan/oauth2/callback).
+    reverse_proxy = true
+    # Go straight to Dex instead of showing oauth2-proxy's own sign-in page.
+    skip_provider_button = true
+    cookie_secure = true
+    # Post-login redirects may only go back to these hosts.
+    whitelist_domains = [".lan", "192.168.6.200"]
+    # Pass the user's identity on to the protected service.
+    set_xauthrequest = true
+
+# Written into every namespace by trust-manager (apps/trust-manager/).
+extraVolumes:
+  - name: homelab-root-ca
+    configMap:
+      name: homelab-root-ca
+extraVolumeMounts:
+  - name: homelab-root-ca
+    mountPath: /etc/homelab-root-ca
+    readOnly: true

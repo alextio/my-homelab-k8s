@@ -43,3 +43,37 @@ grafana:
   grafana.ini:
     dashboards:
       default_home_dashboard_path: /tmp/dashboards/nodes.json # path is inside grafana container
+    server:
+      # Grafana builds the OAuth callback (https://grafana.lan/login/generic_oauth)
+      # from this.
+      root_url: https://grafana.lan
+    # Login through Dex (apps/dex/). The local admin login keeps working as a
+    # fallback. client_secret comes from GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET
+    # (envValueFrom below).
+    auth.generic_oauth:
+      enabled: true
+      name: Dex
+      client_id: grafana
+      scopes: openid profile email
+      auth_url: https://dex.lan/auth
+      token_url: https://dex.lan/token
+      api_url: https://dex.lan/userinfo
+      use_pkce: true
+      login_attribute_path: preferred_username
+      # Dex's static users have no groups, so pick the role by email. Anyone
+      # else who logs in through Dex is a Viewer.
+      role_attribute_path: "email == 'alex@homelab.lan' && 'Admin' || 'Viewer'"
+      # The homelab CA, mounted by extraConfigmapMounts below.
+      tls_client_ca: /etc/grafana/homelab-root-ca/ca.crt
+  envValueFrom:
+    # Written by apps/kube-prometheus-stack/externalsecret-grafana-dex-oidc.yaml.
+    GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET:
+      secretKeyRef:
+        name: grafana-dex-oidc
+        key: clientSecret
+  # Written into every namespace by trust-manager (apps/trust-manager/).
+  extraConfigmapMounts:
+    - name: homelab-root-ca
+      configMap: homelab-root-ca
+      mountPath: /etc/grafana/homelab-root-ca
+      readOnly: true

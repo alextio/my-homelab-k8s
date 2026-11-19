@@ -23,9 +23,21 @@ spec:
       # without a hosts entry. The served cert is still the *.lan cert, so expect a
       # browser warning when using the IP.
       match: (Host(`traefik.lan`) || Host(`192.168.6.200`)) && (PathPrefix(`/dashboard`) || PathPrefix(`/api`))
+      # Dex login via oauth2-proxy (middleware/oauth2-proxy.yaml).
+      middlewares:
+        - name: oauth2-proxy
+          namespace: traefik
       services:
         - kind: TraefikService
           name: api@internal
+    # Login callback and sign-out go straight to oauth2-proxy, so its cookie
+    # is set on this host. Both hosts are registered as callbacks in Dex.
+    - kind: Rule
+      match: (Host(`traefik.lan`) || Host(`192.168.6.200`)) && PathPrefix(`/oauth2/`)
+      services:
+        - name: oauth2-proxy
+          namespace: oauth2-proxy
+          port: 80
     # Bare host or IP at exactly "/" redirects to /dashboard/. The middleware
     # runs before the service, so the service is never reached for this route.
     - kind: Rule

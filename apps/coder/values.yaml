@@ -14,6 +14,20 @@ coder:
     # (envUseClusterAccessURL).
     - name: CODER_ACCESS_URL
       value: https://coder.lan
+    # Login through Dex (apps/dex/). Password login stays enabled so the
+    # existing owner account still works. Coder only accepts verified emails;
+    # Dex marks its static users verified.
+    - name: CODER_OIDC_ISSUER_URL
+      value: https://dex.lan
+    - name: CODER_OIDC_CLIENT_ID
+      value: coder
+    - name: CODER_OIDC_CLIENT_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: coder-dex-oidc
+          key: clientSecret
+    - name: CODER_OIDC_SIGN_IN_TEXT
+      value: Sign in with Dex
     # No CODER_WILDCARD_ACCESS_URL yet: workspace apps are served on paths
     # under coder.lan. A subdomain wildcard needs a matching TLS cert and DNS
     # (*.coder.lan isn't covered by the *.lan wildcard).
@@ -33,3 +47,16 @@ coder:
       - name: traefik
         namespace: traefik
         sectionName: websecure
+
+  # Trust the homelab CA for the calls to https://dex.lan. The ConfigMap is
+  # written into every namespace by trust-manager (apps/trust-manager/). Go
+  # reads every file in /etc/ssl/certs on top of the image's bundle.
+  volumes:
+    - name: homelab-root-ca
+      configMap:
+        name: homelab-root-ca
+  volumeMounts:
+    - name: homelab-root-ca
+      mountPath: /etc/ssl/certs/homelab-root-ca.crt
+      subPath: ca.crt
+      readOnly: true

@@ -8,9 +8,47 @@
 
 configs:
   params:
-    # Serve plain HTTP; the UI is reached via `kubectl port-forward`, and any
-    # ingress in front of it would terminate TLS itself
+    # Serve plain HTTP: Traefik terminates TLS for argocd.lan (httproute.yaml).
+    # `kubectl port-forward` still works too.
     server.insecure: true
+
+  cm:
+    # The external URL. Argo CD builds the OIDC callback
+    # (https://argocd.lan/auth/callback) from it.
+    url: https://argocd.lan
+    # Login through the shared Dex (apps/dex/), not the chart's bundled one
+    # (dex.enabled below). clientSecret is read from the argocd-dex-oidc
+    # Secret (externalsecret.yaml). The local admin account keeps working as
+    # a fallback.
+    oidc.config: |
+      name: Dex
+      issuer: https://dex.lan
+      clientID: argocd
+      clientSecret: $argocd-dex-oidc:clientSecret
+      cliClientID: argocd-cli
+      requestedScopes: ["openid", "profile", "email"]
+
+  rbac:
+    # Dex's static users have no groups, so bind people by email. Anyone else
+    # who logs in through Dex gets no access until listed here.
+    scopes: "[groups, email]"
+    policy.default: ""
+    policy.csv: |
+      g, alex@homelab.lan, role:admin
 
 dex:
   enabled: false
+
+server:
+  # Trust the homelab CA for the call to https://dex.lan. The ConfigMap is
+  # written into every namespace by trust-manager (apps/trust-manager/). Go
+  # reads every file in /etc/ssl/certs on top of the image's bundle.
+  volumes:
+    - name: homelab-root-ca
+      configMap:
+        name: homelab-root-ca
+  volumeMounts:
+    - name: homelab-root-ca
+      mountPath: /etc/ssl/certs/homelab-root-ca.crt
+      subPath: ca.crt
+      readOnly: true

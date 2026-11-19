@@ -1,0 +1,23 @@
+# Lets HTTPRoutes in these namespaces send their /oauth2/* paths to the
+# oauth2-proxy Service. Gateway API refuses cross-namespace backendRefs
+# without a grant in the target namespace.
+#
+# Not needed for the Traefik dashboard: it uses an IngressRoute, which
+# reaches across namespaces through Traefik's allowCrossNamespace.
+apiVersion: gateway.networking.k8s.io/v1
+kind: ReferenceGrant
+metadata:
+  name: oauth2-proxy-callbacks
+  namespace: oauth2-proxy
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: monitoring
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: adguard-home
+  to:
+    - group: ""
+      kind: Service
+      name: oauth2-proxy

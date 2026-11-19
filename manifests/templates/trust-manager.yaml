@@ -1,0 +1,65 @@
+# ArgoCD Application — trust-manager
+#
+# Copies the homelab root CA certificate into a `homelab-root-ca` ConfigMap
+# (key ca.crt) in every namespace, so pods can verify *.lan certs signed by
+# it. First consumers are the services that call Dex at https://dex.lan.
+#
+# Installed into cert-manager's namespace: trust-manager only reads Bundle
+# sources from its "trust namespace", and the homelab-root-ca Secret lives
+# there.
+#
+# Sync wave -2: operator. Its webhook cert is issued by cert-manager (same
+# wave), so it retries until cert-manager is up. The chart ships its own
+# Bundle CRD; the Bundle in apps/trust-manager/ is in-app wave 1, so the CRD
+# and webhook exist before it is applied.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: trust-manager
+  namespace: argocd
+  annotations:
+    # See AGENTS.md "Sync waves".
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  project: default
+  sources:
+    # Source 1: The trust-manager Helm chart
+    - repoURL: https://charts.jetstack.io
+      chart: trust-manager
+      targetRevision: v0.26.0
+      helm:
+        valueFiles:
+          - $values/apps/trust-manager/values.yaml
+    # Source 2: This repo, used only as a $values reference.
+    - repoURL: https://github.com/alextio/my-homelab-k8s
+      targetRevision: {{ .Values.revision }}
+      ref: values
+    # Source 3: This repo, providing the Bundle in apps/trust-manager/
+    # (values.yaml is excluded since Source 1 consumes it via $values).
+    - repoURL: https://github.com/alextio/my-homelab-k8s
+      targetRevision: {{ .Values.revision }}
+      path: apps/trust-manager
+      directory:
+        recurse: true
+        exclude: 'values.yaml'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    # Waves only order creation; retry until earlier waves are up. See
+    # AGENTS.md "Sync waves".
+    retry:
+      limit: -1
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      # The Bundle CRD comes from this same app's chart, so it isn't
+      # registered yet when Argo CD dry-runs the first sync.
+      - SkipDryRunOnMissingResource=true

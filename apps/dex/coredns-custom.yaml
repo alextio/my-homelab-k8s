@@ -1,0 +1,20 @@
+# Lets pods resolve dex.lan. Services exchange login codes for tokens by
+# calling the issuer URL from inside the cluster, but CoreDNS forwards .lan to
+# the node's upstream resolver, which answers NXDOMAIN. This points dex.lan at
+# the Traefik Service, which serves it with the *.lan cert like any LAN client
+# would see.
+#
+# k3s's CoreDNS imports every *.override key of this ConfigMap into its main
+# server block. CoreDNS may not notice a brand-new ConfigMap; if dex.lan still
+# doesn't resolve, `kubectl -n kube-system rollout restart deploy/coredns`.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns-custom
+  namespace: kube-system
+data:
+  dex.override: |
+    rewrite stop {
+      name exact dex.lan traefik.traefik.svc.cluster.local
+      answer auto
+    }

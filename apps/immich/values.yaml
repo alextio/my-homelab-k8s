@@ -12,11 +12,32 @@ server:
   extraEnv:
     - name: IMMICH_MACHINE_LEARNING_ENABLED
       value: "false"
+    # Trust the homelab CA (extraVolumes below) for the OAuth calls to
+    # https://dex.lan. Node adds this to its built-in CA list.
+    - name: NODE_EXTRA_CA_CERTS
+      value: /etc/homelab-root-ca/ca.crt
   persistence:
     # local-path (k3s default, reclaimPolicy Delete): the library lives on the
     # node's disk and is removed with the PVC. Fine to start; move to
     # dedicated storage before relying on it.
     size: 50Gi
+
+# Homelab CA, written into every namespace by trust-manager
+# (apps/trust-manager/). Used by NODE_EXTRA_CA_CERTS above.
+#
+# The OAuth (Dex) settings themselves are not here: Immich keeps them in its
+# database and edits them in Administration > Settings > OAuth. Setting them
+# from a config file (IMMICH_CONFIG_FILE) would lock every other admin
+# setting in the UI. Values to enter: issuer https://dex.lan, client ID
+# immich, client secret from Bitwarden entry dex-immich-client-secret.
+extraVolumes:
+  - name: homelab-root-ca
+    configMap:
+      name: homelab-root-ca
+extraVolumeMounts:
+  - name: homelab-root-ca
+    mountPath: /etc/homelab-root-ca
+    readOnly: true
 
 # Disabled for now: no face recognition, smart search or duplicate
 # detection. Saves ~0.5-2Gi RAM and a 10Gi model-cache PVC. The server

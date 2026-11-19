@@ -5,6 +5,8 @@
 
 Deploying a service like MetalLB is a learning exercise, and its outcome is these two pieces: a correct Application CR in `manifests/` and matching configuration in `apps/`. Keep each step small and self-contained so it's clear what was learned.
 
+**Confirm before adding any new Application.** Before creating a new `manifests/templates/<service>.yaml`, stop and ask the user, laying out the tradeoffs: what problem it solves, the alternatives (including configuring an existing app, or not adding anything), what it costs to run, and what it adds to maintain and upgrade. This applies even when the Application is only a supporting piece of a larger task (e.g. trust-manager to distribute a CA). Changing existing Applications doesn't need this.
+
 ## Manifests are a Helm chart
 
 `manifests/` is a Helm chart: the root Application (`app-of-apps.yaml`) renders `manifests/templates/*.yaml` with `helm template`, so each cluster's root can pass different values. Defaults in `manifests/values.yaml` are prod.
@@ -21,9 +23,9 @@ Single source of truth for ordering. Root creates child Applications in wave ord
 | Wave | What | Applications |
 |------|------|--------------|
 | -3 | CRDs only | `gateway-api-crds`, `cert-manager-crds`, `agentgateway-crds` |
-| -2 | Operators / controllers | `argocd`, `cert-manager`, `metallb`, `external-secrets`, `cloudnative-pg` |
+| -2 | Operators / controllers | `argocd`, `cert-manager`, `trust-manager`, `metallb`, `external-secrets`, `cloudnative-pg` |
 | -1 | Shared infrastructure: ingress (needs cert-manager issuers and MetalLB IPs) and the shared database (needs the CNPG operator and ESO) | `traefik`, `postgres` |
-| 0 | Workloads (default) | `kube-prometheus-stack`, `agentgateway`, `adguard-home`, `dex`, `immich`, `coder` |
+| 0 | Workloads (default) | `kube-prometheus-stack`, `agentgateway`, `adguard-home`, `dex`, `oauth2-proxy`, `immich`, `coder` |
 
 **Why:** CRDs must be established before any custom resource that uses them, and Argo CD does not wait for a CRD to register within a single sync.
 
