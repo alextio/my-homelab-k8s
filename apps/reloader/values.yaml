@@ -13,12 +13,26 @@ reloader:
   # Record the reload as a pod-template annotation instead of injecting an env
   # var into the containers. Recommended by Reloader for GitOps tools.
   reloadStrategy: annotations
-  # The delete-and-recreate flow above is a create event, not an update.
+  # Deleting a Secret so ESO recreates it is a create event, not an update.
   # Create events only count after Reloader's initial sync, so a Reloader
   # restart doesn't roll everything.
   reloadOnCreate: true
   # Opt-in only (the default, kept explicit).
   autoReloadAll: false
-  # k3s owns the Deployments here (e.g. CoreDNS) and would drop the
-  # annotations, so restart those by hand.
-  ignoreNamespaces: kube-system
+  # Scoped mode: watch only the namespaces below. The chart then creates a
+  # Role + RoleBinding in each one and no ClusterRole, so Reloader can't read
+  # Secrets anywhere else (e.g. the Bitwarden token in external-secrets, or
+  # argocd). The release namespace (reloader) is added automatically.
+  #
+  # Keep this list in sync with the opted-in workloads table in AGENTS.md
+  # "Reloader": a workload in a namespace missing here is silently never
+  # reloaded. A Role can't be created before its namespace exists, so on a
+  # fresh cluster this app retries (syncPolicy.retry) until the wave-0 apps
+  # have created theirs.
+  watchGlobally: false
+  namespaces:
+    - coder
+    - dex
+    - immich
+    - monitoring # kube-prometheus-stack (Grafana)
+    - oauth2-proxy

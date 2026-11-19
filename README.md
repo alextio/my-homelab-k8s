@@ -261,6 +261,10 @@ To add a secret for a service:
      secret.reloader.stakater.com/reload: "<secret-name>"
    ```
 
+   Reloader only watches the namespaces listed in `reloader.namespaces`
+   (`apps/reloader/values.yaml`), so it can't read Secrets anywhere else. Add
+   the service's namespace there if it's new, or the annotation never fires.
+
    [AGENTS.md](AGENTS.md#reloader) covers when to skip this, how to find
    the right values key, and the table of opted-in workloads.
 
@@ -385,12 +389,15 @@ kubectl -n monitoring get secret kube-prometheus-stack-grafana \
 - **Add a service:** add `apps/<name>/` and `manifests/templates/<name>.yaml`, pick a
   sync wave from [AGENTS.md](AGENTS.md#sync-waves), and if it needs a fixed
   IP, claim one in the IP table first. If it reads Secrets or ConfigMaps,
-  opt it into [Reloader](AGENTS.md#reloader) so changes restart it. Push.
+  opt it into [Reloader](AGENTS.md#reloader) so changes restart it, and add
+  its namespace to `reloader.namespaces`. Push.
   Sources that point at this repo use
   `targetRevision: {{ .Values.revision }}`; see
   [AGENTS.md](AGENTS.md#manifests-are-a-helm-chart).
 - **Remove a service:** delete `manifests/templates/<name>.yaml`, push. `prune: true`
-  removes the Application and everything it manages.
+  removes the Application and everything it manages. If it was opted into
+  Reloader, drop its namespace from `reloader.namespaces` and its row from
+  the table in [AGENTS.md](AGENTS.md#reloader).
 - **Don't `kubectl edit` managed resources.** `selfHeal: true` reverts
   manual changes to match Git.
 - **Changed `app-of-apps.yaml`?** It isn't managed by Argo CD. Re-run

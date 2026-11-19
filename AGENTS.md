@@ -68,6 +68,11 @@ To pull a changed value on demand, delete the target Secret and ESO recreates it
 
 Reloader (`apps/reloader/`) rolls a Deployment/StatefulSet/DaemonSet when a Secret or ConfigMap it names changes, including the ESO delete-and-recreate above. Without it, a changed secret value only takes effect after a manual `kubectl rollout restart`. It is opt-in per workload (`autoReloadAll: false`).
 
+**Reloader only watches the namespaces listed in `reloader.namespaces` in `apps/reloader/values.yaml`.** Scoped mode (`watchGlobally: false`) gives it a Role per listed namespace and no ClusterRole. **Why:** Reloader can read every Secret it watches, so cluster-wide mode would let a compromised Reloader read every Secret in the cluster, including the Bitwarden token and Argo CD's credentials. **Keep that list exactly matching the namespaces in the opted-in table below:**
+- Add the namespace when a workload in a new namespace opts in. Reloader silently ignores annotations in namespaces it doesn't watch, so the opt-in looks right in Git and never fires.
+- Remove it when the last opted-in workload in that namespace opts out or its Application is removed, so Reloader doesn't keep Secret access it no longer needs.
+- Don't switch back to `watchGlobally: true` or use `namespaceSelector` instead: both need cluster-wide Secret read access.
+
 **Every new service that reads a Secret or ConfigMap at startup opts in.** When adding or changing a service:
 
 1. **List what the pod reads:** every ExternalSecret target in `apps/<svc>/` that is consumed through `envFrom`, `secretKeyRef`, a volume or the chart's `existingSecret`, plus `homelab-root-ca` if the pod mounts it (so a CA rotation reaches it).
@@ -75,7 +80,7 @@ Reloader (`apps/reloader/`) rolls a Deployment/StatefulSet/DaemonSet when a Secr
    - Chart-rendered config that already has a checksum annotation; the chart rolls the pod for it on sync.
    - Values that only seed state once: a bundled database's password (`immich-credentials`), AdGuard's seeded config. Restarting on a new value just breaks the connection or changes nothing.
    - Apps that re-read the value while running (Argo CD's `argocd-secret` / `$secret:key` references, Grafana's dashboard sidecar).
-   - Anything in `kube-system`: Reloader ignores that namespace because k3s owns those Deployments.
+   - Anything in `kube-system`: k3s owns those Deployments and would drop the annotations. Never add `kube-system` to `reloader.namespaces`.
 3. **Annotate the pod template** in `apps/<svc>/values.yaml`, naming each Secret/ConfigMap explicitly (comma-separated, no spaces):
 
    ```yaml
@@ -87,21 +92,22 @@ Reloader (`apps/reloader/`) rolls a Deployment/StatefulSet/DaemonSet when a Secr
 
    The key's path depends on the chart: top-level `podAnnotations` for most, `coder.podAnnotations`, `grafana.podAnnotations` under kube-prometheus-stack. Check the chart's `values.yaml`. If a chart has no pod annotations value, use its Deployment annotations value (`deploymentAnnotations` or similar); Reloader checks the workload's own metadata first and falls back to the pod template. For raw manifests in `apps/<svc>/`, put the annotations on `spec.template.metadata.annotations`.
 4. **Verify the render** with `helm template x <chart> -f apps/<svc>/values.yaml | grep -B20 reloader.stakater`. The annotations must sit under a Deployment/StatefulSet's `spec.template.metadata`, not on a Service or the Pod of a Helm test.
-5. **Add a row to the table below.**
+5. **Add the workload's namespace** (the Application's `destination.namespace`) to `reloader.namespaces` in `apps/reloader/values.yaml` if it isn't there yet, then confirm with `helm template reloader stakater/reloader --version <pinned> -n reloader -f apps/reloader/values.yaml | grep -- --namespaces=`.
+6. **Add a row to the table below.** Removing a service or an opt-in reverses steps 5 and 6.
 
 Don't use `reloader.stakater.com/auto: "true"`. It also matches chart-rendered config that already has a checksum annotation, so one sync rolls the pod twice, and it hides which Secret triggers a restart. Changing the annotations themselves rolls the pod once on the next sync.
 
 To test an opt-in: `kubectl -n <ns> delete secret <name>`, then `kubectl -n <ns> get pods -w`. ESO recreates the Secret and a new pod should start without a manual restart.
 
-Workloads opted in (keep this current):
+Workloads opted in. Keep this current, and keep its Namespace column identical to `reloader.namespaces`:
 
-| Workload | Secrets | ConfigMaps | Defined in |
-|----------|---------|------------|------------|
-| dex | `dex-env` | | `apps/dex/values.yaml` |
-| oauth2-proxy | `oauth2-proxy` | `homelab-root-ca` | `apps/oauth2-proxy/values.yaml` |
-| coder | `coder-db-url`, `coder-dex-oidc` | `homelab-root-ca` | `apps/coder/values.yaml` |
-| grafana | `grafana-dex-oidc` | `homelab-root-ca` | `apps/kube-prometheus-stack/values.yaml` |
-| immich | (not `immich-credentials`: seeds the bundled DB) | `homelab-root-ca` | `apps/immich/values.yaml` |
+| Workload | Namespace | Secrets | ConfigMaps | Defined in |
+|----------|-----------|---------|------------|------------|
+| coder | `coder` | `coder-db-url`, `coder-dex-oidc` | `homelab-root-ca` | `apps/coder/values.yaml` |
+| dex | `dex` | `dex-env` | | `apps/dex/values.yaml` |
+| immich | `immich` | (not `immich-credentials`: seeds the bundled DB) | `homelab-root-ca` | `apps/immich/values.yaml` |
+| grafana | `monitoring` | `grafana-dex-oidc` | `homelab-root-ca` | `apps/kube-prometheus-stack/values.yaml` |
+| oauth2-proxy | `oauth2-proxy` | `oauth2-proxy` | `homelab-root-ca` | `apps/oauth2-proxy/values.yaml` |
 
 Not opted in on purpose: adguard-home (config is seeded once into its PVC), argocd (re-reads its secrets while running), CoreDNS (`kube-system`, k3s-managed; restart by hand).
 
