@@ -1,0 +1,21 @@
+# ssh_config for the Coder pod, so a template's Docker provider only needs
+# host = "ssh://coder-1". Mounted at /home/coder/.ssh/config together with
+# the key from externalsecret-ssh.yaml (values.yaml).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coder-ssh-config
+  namespace: coder
+data:
+  config: |
+    # coder-1: Proxmox VM 1003, rootless Podman for Coder workspaces
+    # (01-opentofu/proxmox, 02-ansible playbooks/podman-docker).
+    Host coder-1
+      HostName 192.168.6.103
+      User coder
+      IdentityFile ~/.ssh/id_ed25519
+      IdentitiesOnly yes
+      UserKnownHostsFile ~/.ssh/known_hosts
+      StrictHostKeyChecking yes
+      # The key is restricted to `podman system dial-stdio` on the VM.
+      ForwardAgent no
