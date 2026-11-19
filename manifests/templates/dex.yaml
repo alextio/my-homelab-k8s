@@ -8,7 +8,7 @@
 # pods resolve dex.lan.
 #
 # Wave 0 (workloads). The ExternalSecret in apps/dex/ is also wave 0: the
-# Dex pod will wait on the dex-config Secret and start once ESO writes it.
+# Dex pod will wait on the dex-env Secret and start once ESO writes it.
 # Requires external-secrets (ClusterSecretStore "bitwarden"); retries until it is up.
 apiVersion: argoproj.io/v1alpha1
 kind: Application

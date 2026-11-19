@@ -1,6 +1,106 @@
-# The Dex config (issuer, static user, clients) is NOT here: it contains the
-# password hash and client secret, so externalsecret.yaml renders it into the
-# dex-config Secret from Bitwarden. The chart just mounts that Secret.
-configSecret:
-  create: false
-  name: dex-config
+# Chart: dex/dex (https://charts.dexidp.io)
+#
+# The chart renders `config` below into the `dex` Secret and mounts it as
+# config.yaml. Nothing secret is written here: the password hash and client
+# secrets are referenced by environment variable name (hashFromEnv,
+# secretEnv) and come from the dex-env Secret (externalsecret.yaml).
+#
+# Changing `config` restarts Dex on sync (the chart puts a checksum of it on
+# the pod). Changing a secret *value* does not: delete the dex-env Secret so
+# ESO re-renders it, then `kubectl -n dex rollout restart deploy/dex`.
+
+envFrom:
+  - secretRef:
+      name: dex-env
+
+config:
+  # Must exactly match every client's issuer URL (and k3s's oidc-issuer-url,
+  # if the API server is ever pointed at Dex).
+  issuer: https://dex.lan
+
+  storage:
+    type: kubernetes
+    config:
+      inCluster: true
+
+  web:
+    http: 0.0.0.0:5556
+
+  oauth2:
+    skipApprovalScreen: true
+
+  # Applies to every client. ID tokens are what services and kubectl present;
+  # they can't be revoked, so keep them short. Refresh tokens renew them
+  # silently and can be revoked (they live in the dex namespace), so they get
+  # the longer limits.
+  expiry:
+    idTokens: 1h
+    refreshTokens:
+      # Log in again after a week without using it...
+      validIfNotUsedFor: 168h
+      # ...and at least every 30 days regardless.
+      absoluteLifetime: 720h
+
+  enablePasswordDB: true
+
+  # One entry per person. userID must be a unique, stable UUID: it is the
+  # token's `sub`, which services key accounts on. Each hash is its own
+  # Bitwarden entry, mapped to an env var in externalsecret.yaml.
+  staticPasswords:
+    - email: alex@homelab.lan
+      username: alex
+      userID: "0fc5b381-b977-43f5-961d-4f7205c90dc5"
+      hashFromEnv: DEX_ALEX_PASSWORD_HASH
+
+  # Each secretEnv reads the same Bitwarden entry as the consuming service's
+  # own ExternalSecret (Secrets can't be shared across namespaces). Immich is
+  # the exception: its OAuth settings live in its database, so that secret is
+  # pasted into the Immich admin UI instead.
+  staticClients:
+    - id: che
+      name: Eclipse Che
+      secretEnv: DEX_CHE_CLIENT_SECRET
+      redirectURIs:
+        - https://che.lan/oauth/callback
+    - id: argocd
+      name: Argo CD
+      secretEnv: DEX_ARGOCD_CLIENT_SECRET
+      redirectURIs:
+        - https://argocd.lan/auth/callback
+    # `argocd login --sso`: public client (no secret), the CLI listens on
+    # localhost for the callback.
+    - id: argocd-cli
+      name: Argo CD CLI
+      public: true
+      redirectURIs:
+        - http://localhost:8085/auth/callback
+    - id: coder
+      name: Coder
+      secretEnv: DEX_CODER_CLIENT_SECRET
+      redirectURIs:
+        - https://coder.lan/api/v2/users/oidc/callback
+    - id: grafana
+      name: Grafana
+      secretEnv: DEX_GRAFANA_CLIENT_SECRET
+      redirectURIs:
+        - https://grafana.lan/login/generic_oauth
+    - id: immich
+      name: Immich
+      secretEnv: DEX_IMMICH_CLIENT_SECRET
+      redirectURIs:
+        - https://immich.lan/auth/login
+        - https://immich.lan/user-settings
+        - https://im.lan/auth/login
+        - https://im.lan/user-settings
+        - app.immich:///oauth-callback
+    # Forward-auth for services with no OIDC support of their own
+    # (apps/oauth2-proxy/). The callback is served on each protected host, so
+    # every host needs its own entry.
+    - id: oauth2-proxy
+      name: oauth2-proxy
+      secretEnv: DEX_OAUTH2_PROXY_CLIENT_SECRET
+      redirectURIs:
+        - https://prometheus.lan/oauth2/callback
+        - https://traefik.lan/oauth2/callback
+        - https://192.168.6.200/oauth2/callback
+        - https://adguard.lan/oauth2/callback
