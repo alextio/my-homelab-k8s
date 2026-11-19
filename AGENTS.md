@@ -23,7 +23,7 @@ Single source of truth for ordering. Root creates child Applications in wave ord
 | Wave | What | Applications |
 |------|------|--------------|
 | -3 | CRDs only | `gateway-api-crds`, `cert-manager-crds`, `agentgateway-crds` |
-| -2 | Operators / controllers | `argocd`, `cert-manager`, `trust-manager`, `metallb`, `external-secrets`, `cloudnative-pg` |
+| -2 | Operators / controllers | `argocd`, `cert-manager`, `trust-manager`, `metallb`, `external-secrets`, `cloudnative-pg`, `reloader` |
 | -1 | Shared infrastructure: ingress (needs cert-manager issuers and MetalLB IPs) and the shared database (needs the CNPG operator and ESO) | `traefik`, `postgres` |
 | 0 | Workloads (default) | `kube-prometheus-stack`, `agentgateway`, `adguard-home`, `dex`, `oauth2-proxy`, `immich`, `coder` |
 
@@ -62,7 +62,48 @@ spec:
     name: bitwarden
 ```
 
-To pull a changed value on demand, delete the target Secret and ESO recreates it from Bitwarden.
+To pull a changed value on demand, delete the target Secret and ESO recreates it from Bitwarden. Reloader then restarts the workloads that use it, as long as they're opted in. **When you add an `ExternalSecret`, add its target Secret to the consuming workload's Reloader annotation** (see [Reloader](#reloader)).
+
+## Reloader
+
+Reloader (`apps/reloader/`) rolls a Deployment/StatefulSet/DaemonSet when a Secret or ConfigMap it names changes, including the ESO delete-and-recreate above. Without it, a changed secret value only takes effect after a manual `kubectl rollout restart`. It is opt-in per workload (`autoReloadAll: false`).
+
+**Every new service that reads a Secret or ConfigMap at startup opts in.** When adding or changing a service:
+
+1. **List what the pod reads:** every ExternalSecret target in `apps/<svc>/` that is consumed through `envFrom`, `secretKeyRef`, a volume or the chart's `existingSecret`, plus `homelab-root-ca` if the pod mounts it (so a CA rotation reaches it).
+2. **Drop what a restart can't fix or doesn't need:**
+   - Chart-rendered config that already has a checksum annotation; the chart rolls the pod for it on sync.
+   - Values that only seed state once: a bundled database's password (`immich-credentials`), AdGuard's seeded config. Restarting on a new value just breaks the connection or changes nothing.
+   - Apps that re-read the value while running (Argo CD's `argocd-secret` / `$secret:key` references, Grafana's dashboard sidecar).
+   - Anything in `kube-system`: Reloader ignores that namespace because k3s owns those Deployments.
+3. **Annotate the pod template** in `apps/<svc>/values.yaml`, naming each Secret/ConfigMap explicitly (comma-separated, no spaces):
+
+   ```yaml
+   # Reloader (apps/reloader/values.yaml): roll when <what> changes.
+   podAnnotations:
+     secret.reloader.stakater.com/reload: "<svc>-env,<svc>-dex-oidc"
+     configmap.reloader.stakater.com/reload: "homelab-root-ca"
+   ```
+
+   The key's path depends on the chart: top-level `podAnnotations` for most, `coder.podAnnotations`, `grafana.podAnnotations` under kube-prometheus-stack. Check the chart's `values.yaml`. If a chart has no pod annotations value, use its Deployment annotations value (`deploymentAnnotations` or similar); Reloader checks the workload's own metadata first and falls back to the pod template. For raw manifests in `apps/<svc>/`, put the annotations on `spec.template.metadata.annotations`.
+4. **Verify the render** with `helm template x <chart> -f apps/<svc>/values.yaml | grep -B20 reloader.stakater`. The annotations must sit under a Deployment/StatefulSet's `spec.template.metadata`, not on a Service or the Pod of a Helm test.
+5. **Add a row to the table below.**
+
+Don't use `reloader.stakater.com/auto: "true"`. It also matches chart-rendered config that already has a checksum annotation, so one sync rolls the pod twice, and it hides which Secret triggers a restart. Changing the annotations themselves rolls the pod once on the next sync.
+
+To test an opt-in: `kubectl -n <ns> delete secret <name>`, then `kubectl -n <ns> get pods -w`. ESO recreates the Secret and a new pod should start without a manual restart.
+
+Workloads opted in (keep this current):
+
+| Workload | Secrets | ConfigMaps | Defined in |
+|----------|---------|------------|------------|
+| dex | `dex-env` | | `apps/dex/values.yaml` |
+| oauth2-proxy | `oauth2-proxy` | `homelab-root-ca` | `apps/oauth2-proxy/values.yaml` |
+| coder | `coder-db-url`, `coder-dex-oidc` | `homelab-root-ca` | `apps/coder/values.yaml` |
+| grafana | `grafana-dex-oidc` | `homelab-root-ca` | `apps/kube-prometheus-stack/values.yaml` |
+| immich | (not `immich-credentials`: seeds the bundled DB) | `homelab-root-ca` | `apps/immich/values.yaml` |
+
+Not opted in on purpose: adguard-home (config is seeded once into its PVC), argocd (re-reads its secrets while running), CoreDNS (`kube-system`, k3s-managed; restart by hand).
 
 ## Shared PostgreSQL
 

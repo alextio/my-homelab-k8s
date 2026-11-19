@@ -39,6 +39,13 @@ extraVolumeMounts:
     mountPath: /etc/homelab-root-ca
     readOnly: true
 
+# Reloader (apps/reloader/values.yaml): roll when the homelab CA changes (Node
+# reads NODE_EXTRA_CA_CERTS only at startup). immich-credentials is left out:
+# the bundled Postgres keeps the password it was initialised with, so
+# restarting on a new one would only break the connection.
+podAnnotations:
+  configmap.reloader.stakater.com/reload: "homelab-root-ca"
+
 # Disabled for now: no face recognition, smart search or duplicate
 # detection. Saves ~0.5-2Gi RAM and a 10Gi model-cache PVC. The server
 # still runs; those features just stay off until this is re-enabled.

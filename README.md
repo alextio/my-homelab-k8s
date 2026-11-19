@@ -69,6 +69,7 @@ to Git.
 | [cert-manager](https://cert-manager.io/) | Self-signed homelab root CA and the `homelab-ca` ClusterIssuer | `cert-manager` |
 | [External Secrets Operator](https://external-secrets.io/) | Renders Kubernetes Secrets from Bitwarden Secrets Manager | `external-secrets` |
 | [CloudNativePG](https://cloudnative-pg.io/) | PostgreSQL operator, plus the one shared `postgres` cluster every service uses | `cnpg-system`, `postgres` |
+| [Reloader](https://github.com/stakater/Reloader) | Rolls opted-in workloads when a Secret or ConfigMap they use changes | `reloader` |
 
 > **Why these choices?**
 > - **Gateway API over `Ingress`**: Traefik serves one shared `Gateway`
@@ -144,6 +145,7 @@ have no `Application` in `manifests/` yet, so Argo CD doesn't deploy them.
 │       ├── metallb.yaml
 │       ├── external-secrets.yaml
 │       ├── cloudnative-pg.yaml
+│       ├── reloader.yaml
 │       ├── traefik.yaml
 │       ├── postgres.yaml
 │       ├── kube-prometheus-stack.yaml
@@ -160,6 +162,7 @@ have no `Application` in `manifests/` yet, so Argo CD doesn't deploy them.
 │   ├── metallb/                  # values.yaml, IPAddressPool, L2Advertisement
 │   ├── external-secrets/         # values.yaml, Bitwarden ClusterSecretStore, sdk-server cert
 │   ├── cloudnative-pg/           # values.yaml for the CNPG operator
+│   ├── reloader/                 # values.yaml (opt-in restarts on Secret/ConfigMap change)
 │   ├── traefik/                  # values.yaml, shared Gateway, *.lan wildcard cert, dashboard
 │   ├── postgres/                 # Shared CNPG Cluster, plus a role + Database per service
 │   ├── kube-prometheus-stack/    # values.yaml, HTTPRoutes, Grafana dashboards
@@ -197,7 +200,7 @@ are up. The canonical table lives in [AGENTS.md](AGENTS.md#sync-waves).
 | Wave | What | Applications |
 |------|------|--------------|
 | -3 | CRDs only | `gateway-api-crds`, `cert-manager-crds`, `agentgateway-crds` |
-| -2 | Operators / controllers | `argocd`, `cert-manager`, `metallb`, `external-secrets`, `cloudnative-pg` |
+| -2 | Operators / controllers | `argocd`, `cert-manager`, `metallb`, `external-secrets`, `cloudnative-pg`, `reloader` |
 | -1 | Shared infrastructure | `traefik`, `postgres` |
 | 0 | Workloads (default) | `kube-prometheus-stack`, `agentgateway`, `adguard-home`, `dex`, `immich`, `coder` |
 
@@ -249,9 +252,22 @@ To add a secret for a service:
        name: bitwarden
    ```
 
+3. Have the workload restart when that Secret changes. List it in the
+   workload's Reloader annotation, through the chart's `podAnnotations` in
+   `apps/<service>/values.yaml`:
+
+   ```yaml
+   podAnnotations:
+     secret.reloader.stakater.com/reload: "<secret-name>"
+   ```
+
+   [AGENTS.md](AGENTS.md#reloader) covers when to skip this, how to find
+   the right values key, and the table of opted-in workloads.
+
 `CreatedOnce` means ESO fetches the value once and never polls Bitwarden.
 This avoids API rate limits and surprise rotations. To pick up a changed
-value, delete the target Secret and ESO recreates it.
+value, delete the target Secret. ESO recreates it, and Reloader rolls every
+workload that lists it.
 
 ---
 
@@ -368,7 +384,8 @@ kubectl -n monitoring get secret kube-prometheus-stack-grafana \
   *Refresh* or run `argocd app get <name> --refresh` to go sooner).
 - **Add a service:** add `apps/<name>/` and `manifests/templates/<name>.yaml`, pick a
   sync wave from [AGENTS.md](AGENTS.md#sync-waves), and if it needs a fixed
-  IP, claim one in the IP table first. Push.
+  IP, claim one in the IP table first. If it reads Secrets or ConfigMaps,
+  opt it into [Reloader](AGENTS.md#reloader) so changes restart it. Push.
   Sources that point at this repo use
   `targetRevision: {{ .Values.revision }}`; see
   [AGENTS.md](AGENTS.md#manifests-are-a-helm-chart).

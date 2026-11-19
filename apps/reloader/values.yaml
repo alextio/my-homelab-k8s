@@ -1,0 +1,24 @@
+# Chart: stakater/reloader (https://stakater.github.io/stakater-charts)
+#
+# Workloads opt in with pod annotations naming the Secrets/ConfigMaps that
+# should restart them. How to opt a service in, what to leave out, and the
+# list of opted-in workloads: AGENTS.md "Reloader".
+#
+# Reloader reads the annotations from the Deployment/StatefulSet metadata and,
+# when none are there, falls back to the pod template (checked in v1.4.24,
+# pkg/common/common.go ShouldReload). Charts nearly always expose
+# podAnnotations and rarely Deployment annotations, so this repo uses the pod
+# template. Re-check that fallback when bumping the chart.
+reloader:
+  # Record the reload as a pod-template annotation instead of injecting an env
+  # var into the containers. Recommended by Reloader for GitOps tools.
+  reloadStrategy: annotations
+  # The delete-and-recreate flow above is a create event, not an update.
+  # Create events only count after Reloader's initial sync, so a Reloader
+  # restart doesn't roll everything.
+  reloadOnCreate: true
+  # Opt-in only (the default, kept explicit).
+  autoReloadAll: false
+  # k3s owns the Deployments here (e.g. CoreDNS) and would drop the
+  # annotations, so restart those by hand.
+  ignoreNamespaces: kube-system

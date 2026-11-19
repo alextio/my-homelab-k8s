@@ -1,6 +1,13 @@
 # Chart: coder-v2/coder (https://helm.coder.com/v2)
 # Coder is configured almost entirely through CODER_* environment variables.
 coder:
+  # Reloader (apps/reloader/values.yaml): roll when the DB URL, OIDC secret or
+  # homelab CA change. The CA is a subPath mount, which never updates in a
+  # running pod, so a CA rotation needs this restart.
+  podAnnotations:
+    secret.reloader.stakater.com/reload: "coder-db-url,coder-dex-oidc"
+    configmap.reloader.stakater.com/reload: "homelab-root-ca"
+
   env:
     # Built by apps/coder/externalsecret.yaml; points at the shared
     # CloudNativePG cluster (postgres-rw.postgres).

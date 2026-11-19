@@ -24,6 +24,12 @@
 # independent of the Argo release name.
 fullnameOverride: oauth2-proxy
 
+# Reloader (apps/reloader/values.yaml): roll when the credentials or the
+# homelab CA change.
+podAnnotations:
+  secret.reloader.stakater.com/reload: "oauth2-proxy"
+  configmap.reloader.stakater.com/reload: "homelab-root-ca"
+
 config:
   # client-id, client-secret and cookie-secret keys, written by
   # externalsecret.yaml.

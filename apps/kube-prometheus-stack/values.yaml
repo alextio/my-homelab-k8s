@@ -32,6 +32,11 @@ prometheus:
               storage: 20Gi
 
 grafana:
+  # Reloader (apps/reloader/values.yaml): roll Grafana when its OIDC client
+  # secret or the homelab CA change.
+  podAnnotations:
+    secret.reloader.stakater.com/reload: "grafana-dex-oidc"
+    configmap.reloader.stakater.com/reload: "homelab-root-ca"
   # Throwaway bootstrap password. Grafana only reads it when it first creates
   # its database; change it in the UI afterwards.
   adminPassword: change-me-please

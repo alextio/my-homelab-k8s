@@ -6,8 +6,12 @@
 # secretEnv) and come from the dex-env Secret (externalsecret.yaml).
 #
 # Changing `config` restarts Dex on sync (the chart puts a checksum of it on
-# the pod). Changing a secret *value* does not: delete the dex-env Secret so
-# ESO re-renders it, then `kubectl -n dex rollout restart deploy/dex`.
+# the pod). To pick up a changed secret *value*, delete the dex-env Secret:
+# ESO re-renders it from Bitwarden and Reloader rolls Dex.
+
+# Reloader (apps/reloader/values.yaml): roll Dex when dex-env changes.
+podAnnotations:
+  secret.reloader.stakater.com/reload: "dex-env"
 
 envFrom:
   - secretRef:
