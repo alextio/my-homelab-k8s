@@ -45,6 +45,7 @@ MetalLB pool `default-pool` covers `192.168.6.200`–`192.168.6.210`. It must st
 | 192.168.6.201 | AdGuard Home | DNS 53 TCP/UDP, bypasses Traefik; dashboard goes through Traefik | `apps/adguard-home/values.yaml` |
 | 192.168.6.202 | agentgateway | AI/LLM gateway proxy, HTTPS 443 as `agentgateway.lan` (own cert, bypasses Traefik), HTTP 8080 | `apps/agentgateway/gateway.yaml` |
 | 192.168.6.203–210 | free | still in `default-pool` | `apps/metallb/default-pool.yaml` |
+| 192.168.6.103 | coder-1 (Proxmox VM 1003, not a MetalLB IP) | Coder workspace host: Coder reaches its rootless Podman socket over SSH | `apps/coder/configmap-ssh.yaml`; VM in the parent repo's `01-opentofu/proxmox/terraform.tfvars` |
 
 Not verified from the cluster: whether non-cluster devices (DHCP leases, Proxmox VMs/LXCs) hold any address in this range.
 
