@@ -88,6 +88,9 @@ config:
       secretEnv: DEX_GRAFANA_CLIENT_SECRET
       redirectURIs:
         - https://grafana.lan/login/generic_oauth
+        # Used once root_url in apps/kube-prometheus-stack/values.yaml moves
+        # to the Let's Encrypt name.
+        - https://grafana.alextio.duckdns.org/login/generic_oauth
     - id: immich
       name: Immich
       secretEnv: DEX_IMMICH_CLIENT_SECRET

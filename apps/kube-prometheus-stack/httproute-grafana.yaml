@@ -12,12 +12,19 @@ metadata:
     gethomepage.dev/group: Monitoring
     gethomepage.dev/icon: grafana.png
 spec:
+  # Attached to both listeners while moving to the Let's Encrypt name; each
+  # listener only serves the hostname that matches it. Drop the .lan pair once
+  # grafana.alextio.duckdns.org is the only name in use.
   parentRefs:
     - name: traefik
       namespace: traefik
       sectionName: websecure
+    - name: traefik
+      namespace: traefik
+      sectionName: websecure-duckdns
   hostnames:
     - grafana.lan
+    - grafana.alextio.duckdns.org
   rules:
     - backendRefs:
         - name: kube-prometheus-stack-grafana
