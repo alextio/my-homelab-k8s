@@ -1,7 +1,8 @@
 # Chart: oauth2-proxy/oauth2-proxy (https://oauth2-proxy.github.io/manifests)
 #
 # Single sign-on through Dex for services with no OIDC support of their own:
-# Prometheus, the Traefik dashboard and the AdGuard Home UI. It doesn't proxy
+# Prometheus, the Traefik dashboard and the AdGuard Home UI, on both their
+# .lan and alextio.duckdns.org names. It doesn't proxy
 # their traffic. Traefik asks it about each request (a forwardAuth
 # Middleware), and it answers 202 (logged in, let it through) or redirects
 # the browser to Dex.
@@ -13,7 +14,7 @@
 #
 # To protect another service:
 #   1. Add https://<host>/oauth2/callback to the oauth2-proxy client's
-#      redirectURIs in apps/dex/externalsecret.yaml.
+#      redirectURIs in apps/dex/values.yaml.
 #   2. In the service's namespace, add a forwardAuth Middleware (copy
 #      apps/kube-prometheus-stack/middleware-oauth2-proxy.yaml).
 #   3. In its HTTPRoute, add the /oauth2/ rule and the ExtensionRef filter
@@ -54,8 +55,9 @@ config:
     # Go straight to Dex instead of showing oauth2-proxy's own sign-in page.
     skip_provider_button = true
     cookie_secure = true
-    # Post-login redirects may only go back to these hosts.
-    whitelist_domains = [".lan", "192.168.6.200"]
+    # Post-login redirects may only go back to these hosts. The leading dot
+    # allows every subdomain (prometheus.lan, adguard.alextio.duckdns.org).
+    whitelist_domains = [".lan", ".alextio.duckdns.org", "192.168.6.200"]
     # Pass the user's identity on to the protected service.
     set_xauthrequest = true
 

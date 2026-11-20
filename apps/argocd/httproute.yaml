@@ -1,5 +1,7 @@
-# argocd.lan on the shared Traefik Gateway. Needed for SSO: Dex redirects the
-# browser back to https://argocd.lan/auth/callback. argocd-server serves plain
+# argocd.lan and argocd.alextio.duckdns.org on the shared Traefik Gateway.
+# Needed for SSO: Dex redirects the browser back to the url in values.yaml
+# (still https://argocd.lan/auth/callback), so a login started on the new
+# name finishes on argocd.lan. argocd-server serves plain
 # HTTP (server.insecure in values.yaml); Traefik terminates TLS.
 #
 # The CLI works through it with gRPC-web:
@@ -16,12 +18,18 @@ metadata:
     gethomepage.dev/group: Cluster Management
     gethomepage.dev/icon: argo-cd.png
 spec:
+  # Attached to both listeners while moving to the Let's Encrypt name; each
+  # listener only serves the hostname that matches it.
   parentRefs:
     - name: traefik
       namespace: traefik
       sectionName: websecure
+    - name: traefik
+      namespace: traefik
+      sectionName: websecure-duckdns
   hostnames:
     - argocd.lan
+    - argocd.alextio.duckdns.org
   rules:
     - backendRefs:
         - name: argocd-server

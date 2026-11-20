@@ -64,14 +64,20 @@ valkey:
   auth:
     existingSecret: immich-credentials
 
-# Chart-rendered HTTPRoute on the shared Traefik Gateway. DNS (*.lan ->
-# Traefik) and TLS (*.lan wildcard cert) already cover both hostnames.
+# Chart-rendered HTTPRoute on the shared Traefik Gateway, on both listeners:
+# *.lan (homelab CA) and the Let's Encrypt name, which the mobile app can use
+# without installing the homelab CA. Each listener only serves the hostnames
+# that match it. OAuth redirect URLs live in Immich's admin UI, not here.
 gateway:
   enabled: true
   parentRefs:
     - name: traefik
       namespace: traefik
       sectionName: websecure
+    - name: traefik
+      namespace: traefik
+      sectionName: websecure-duckdns
   hostnames:
     - immich.lan
     - im.lan
+    - immich.alextio.duckdns.org

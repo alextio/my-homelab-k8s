@@ -12,15 +12,22 @@ metadata:
     gethomepage.dev/group: Monitoring
     gethomepage.dev/icon: prometheus.png
 spec:
+  # Attached to both listeners while moving to the Let's Encrypt name; each
+  # listener only serves the hostname that matches it.
   parentRefs:
     - name: traefik
       namespace: traefik
       sectionName: websecure
+    - name: traefik
+      namespace: traefik
+      sectionName: websecure-duckdns
   hostnames:
     - prometheus.lan
+    - prometheus.alextio.duckdns.org
   rules:
     # Login callback and sign-out go straight to oauth2-proxy, so its cookie
-    # is set on prometheus.lan (allowed by apps/oauth2-proxy/referencegrant.yaml).
+    # is set on the requested host (allowed by
+    # apps/oauth2-proxy/referencegrant.yaml).
     - matches:
         - path:
             type: PathPrefix
@@ -29,7 +36,8 @@ spec:
         - name: oauth2-proxy
           namespace: oauth2-proxy
           port: 80
-    # Prometheus has no login of its own; require Dex login
+    # Prometheus has no login of its own; require Dex login on every hostname
+    # above (this rule has no host match, so a new hostname is covered too)
     # (middleware-oauth2-proxy.yaml). Grafana queries Prometheus through its
     # Service, not this route, so it isn't affected.
     - filters:

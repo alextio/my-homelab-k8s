@@ -1,0 +1,44 @@
+# Traefik dashboard on the Let's Encrypt name. A separate IngressRoute from
+# ingressroute-dashboard.yaml because an IngressRoute takes one tls.secretName:
+# this one serves traefik-duckdns-tls (certificate-wildcard-duckdns.yaml).
+# Keep its rules in step with ingressroute-dashboard.yaml, including the
+# oauth2-proxy middleware on the dashboard rule.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: traefik-dashboard-duckdns
+  namespace: traefik
+  labels:
+    app.kubernetes.io/name: traefik
+spec:
+  entryPoints:
+    - websecure
+  tls:
+    secretName: traefik-duckdns-tls
+  routes:
+    - kind: Rule
+      match: Host(`traefik.alextio.duckdns.org`) && (PathPrefix(`/dashboard`) || PathPrefix(`/api`))
+      # Dex login via oauth2-proxy (middleware/oauth2-proxy.yaml).
+      middlewares:
+        - name: oauth2-proxy
+          namespace: traefik
+      services:
+        - kind: TraefikService
+          name: api@internal
+    # Login callback and sign-out go straight to oauth2-proxy, so its cookie
+    # is set on this host. Registered as a callback in Dex.
+    - kind: Rule
+      match: Host(`traefik.alextio.duckdns.org`) && PathPrefix(`/oauth2/`)
+      services:
+        - name: oauth2-proxy
+          namespace: oauth2-proxy
+          port: 80
+    # Bare host at exactly "/" redirects to /dashboard/.
+    - kind: Rule
+      match: Host(`traefik.alextio.duckdns.org`) && Path(`/`)
+      middlewares:
+        - name: root-dashboard-redirect
+          namespace: traefik
+      services:
+        - kind: TraefikService
+          name: api@internal

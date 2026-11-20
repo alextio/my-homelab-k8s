@@ -9,15 +9,22 @@ metadata:
   name: adguard-home
   namespace: adguard-home
 spec:
+  # Attached to both listeners while moving to the Let's Encrypt name; each
+  # listener only serves the hostname that matches it.
   parentRefs:
     - name: traefik
       namespace: traefik
       sectionName: websecure
+    - name: traefik
+      namespace: traefik
+      sectionName: websecure-duckdns
   hostnames:
     - adguard.lan
+    - adguard.alextio.duckdns.org
   rules:
     # Login callback and sign-out go straight to oauth2-proxy, so its cookie
-    # is set on adguard.lan (allowed by apps/oauth2-proxy/referencegrant.yaml).
+    # is set on the requested host (allowed by
+    # apps/oauth2-proxy/referencegrant.yaml).
     - matches:
         - path:
             type: PathPrefix
@@ -26,6 +33,7 @@ spec:
         - name: oauth2-proxy
           namespace: oauth2-proxy
           port: 80
+    # Dex login on every hostname above: this rule has no host match.
     - filters:
         - type: ExtensionRef
           extensionRef:

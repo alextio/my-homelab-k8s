@@ -114,3 +114,6 @@ config:
         - https://traefik.lan/oauth2/callback
         - https://192.168.6.200/oauth2/callback
         - https://adguard.lan/oauth2/callback
+        - https://prometheus.alextio.duckdns.org/oauth2/callback
+        - https://traefik.alextio.duckdns.org/oauth2/callback
+        - https://adguard.alextio.duckdns.org/oauth2/callback
