@@ -31,13 +31,14 @@ spec:
       targetRevision: {{ .Values.revision }}
       ref: values
     # Source 3: This repo, providing the ExternalSecret in apps/coder/
-    # (values.yaml is excluded since Source 1 consumes it).
+    # (values.yaml is excluded since Source 1 consumes it). templates/ holds
+    # Coder templates (Terraform), which are pushed to Coder, not applied.
     - repoURL: https://github.com/alextio/my-homelab-k8s
       targetRevision: {{ .Values.revision }}
       path: apps/coder
       directory:
         recurse: true
-        exclude: 'values.yaml'
+        exclude: '{values.yaml,templates/*}'
   destination:
     server: https://kubernetes.default.svc
     namespace: coder

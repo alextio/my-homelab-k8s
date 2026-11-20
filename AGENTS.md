@@ -57,7 +57,7 @@ Coder templates run workspaces as pods in the `coder-workspaces` namespace, on t
 - **Namespace** (`apps/coder/namespace-workspaces.yaml`): `restricted` Pod Security. Don't lower it, and don't add exceptions for nested containers.
 - **Network** (`apps/coder/networkpolicy-workspaces.yaml`): default-deny ingress; egress only to cluster DNS, the Coder pods and the non-private internet. Allowing a LAN range or another namespace makes it reachable from every workspace, and bypasses Traefik/oauth2-proxy for Services in it.
 - **RBAC:** Coder's service account manages pods, PVCs and Deployments in `coder-workspaces` only (`coder.serviceAccount.workspaceNamespaces` in `apps/coder/values.yaml`). `workspacePerms` stays `false` for the `coder` namespace, whose Secrets a pod there could mount.
-- **Templates** set `automountServiceAccountToken: false` on workspace pods, and keep no other Secrets in `coder-workspaces`.
+- **Templates** (`apps/coder/templates/`, see its README) set `automountServiceAccountToken: false` on workspace pods, and keep no other Secrets in `coder-workspaces`. They're Terraform that Coder runs, not manifests: Argo CD excludes the directory, and a change only takes effect after `coder templates push`. Check with `tofu validate` first. Don't loosen the cluster to fit a template.
 
 ## ExternalSecrets
 
