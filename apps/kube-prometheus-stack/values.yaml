@@ -51,14 +51,21 @@ grafana:
     server:
       # Grafana builds links and the OAuth callback
       # (https://grafana.alextio.duckdns.org/login/generic_oauth) from this.
-      # The Let's Encrypt name; grafana.lan still serves (httproute-grafana.yaml),
-      # but logins land on this name.
+      # It takes one URL. grafana.lan still serves (httproute-grafana.yaml),
+      # but a login started there finishes on this name.
       root_url: https://grafana.alextio.duckdns.org
-    # Login through Dex (apps/dex/). The local admin login keeps working as a
-    # fallback. client_secret comes from GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET
-    # (envValueFrom below).
+    # Browser logins only go through Dex: no username/password form. If Dex
+    # is down, re-enable the form here to get in as the local admin.
+    # Basic auth stays on: the dashboard/datasource sidecars use the admin
+    # login to call Grafana's reload API.
+    auth:
+      disable_login_form: true
+    # Login through Dex (apps/dex/). client_secret comes from
+    # GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET (envValueFrom below).
     auth.generic_oauth:
       enabled: true
+      # Skip Grafana's login page and go straight to Dex.
+      auto_login: true
       name: Dex
       client_id: grafana
       scopes: openid profile email
