@@ -1,11 +1,11 @@
 # argocd.lan and argocd.alextio.duckdns.org on the shared Traefik Gateway.
-# Needed for SSO: Dex redirects the browser back to the url in values.yaml
-# (still https://argocd.lan/auth/callback), so a login started on the new
-# name finishes on argocd.lan. argocd-server serves plain
+# Needed for SSO: Dex redirects the browser back to /auth/callback on
+# whichever name the login started on (url and additionalUrls in
+# values.yaml). argocd-server serves plain
 # HTTP (server.insecure in values.yaml); Traefik terminates TLS.
 #
 # The CLI works through it with gRPC-web:
-#   argocd login argocd.lan --sso --grpc-web
+#   argocd login argocd.alextio.duckdns.org --sso --grpc-web
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:

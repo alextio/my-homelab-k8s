@@ -47,6 +47,10 @@ data:
         # public DuckDNS A record.
         - domain: '*.alextio.duckdns.org'
           answer: 192.168.6.200
+        # agentgateway bypasses Traefik on the Let's Encrypt name too. An exact
+        # rewrite wins over the wildcard above.
+        - domain: agentgateway.alextio.duckdns.org
+          answer: 192.168.6.202
     filters:
       - enabled: true
         url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt

@@ -29,3 +29,18 @@ spec:
     allowedRoutes:
       namespaces:
         from: All
+  # Same port, picked by SNI: the Let's Encrypt name, so clients need no
+  # homelab CA. Routes without a sectionName attach to every listener.
+  - protocol: HTTPS
+    port: 443
+    name: https-duckdns
+    hostname: agentgateway.alextio.duckdns.org
+    tls:
+      mode: Terminate
+      certificateRefs:
+      # Written by the agentgateway-duckdns-tls Certificate
+      # (certificate-duckdns.yaml).
+      - name: agentgateway-duckdns-tls
+    allowedRoutes:
+      namespaces:
+        from: All

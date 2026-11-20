@@ -71,6 +71,7 @@ config:
       secretEnv: DEX_ARGOCD_CLIENT_SECRET
       redirectURIs:
         - https://argocd.lan/auth/callback
+        - https://argocd.alextio.duckdns.org/auth/callback
     # `argocd login --sso`: public client (no secret), the CLI listens on
     # localhost for the callback.
     - id: argocd-cli
@@ -100,6 +101,8 @@ config:
       redirectURIs:
         - https://immich.lan/auth/login
         - https://immich.lan/user-settings
+        - https://immich.alextio.duckdns.org/auth/login
+        - https://immich.alextio.duckdns.org/user-settings
         - https://im.lan/auth/login
         - https://im.lan/user-settings
         - app.immich:///oauth-callback

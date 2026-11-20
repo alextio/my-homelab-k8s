@@ -1,0 +1,26 @@
+# Certificate for the agentgateway-proxy Gateway's https-duckdns listener.
+# secretName must match that listener's certificateRefs in gateway.yaml.
+#
+# A wildcard, not agentgateway.alextio.duckdns.org: every issued cert is
+# published in Certificate Transparency logs, and a wildcard keeps the name
+# out of them. It is a second copy of traefik-wildcard-duckdns's names
+# because a Gateway can't read a Secret from another namespace.
+#
+# DuckDNS keeps one TXT record for the whole domain, so this and
+# traefik-wildcard-duckdns overwrite each other's challenge if they renew at
+# the same time. renewBefore (15 days, vs the default third of the lifetime)
+# keeps their renewals about two weeks apart.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: agentgateway-duckdns-tls
+  namespace: agentgateway
+spec:
+  secretName: agentgateway-duckdns-tls
+  dnsNames:
+    - "*.alextio.duckdns.org"
+  renewBefore: 360h
+  issuerRef:
+    name: duckdns-letsencrypt
+    kind: ClusterIssuer
+    group: cert-manager.io

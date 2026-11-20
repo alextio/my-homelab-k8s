@@ -103,7 +103,7 @@ router's DHCP range. The source of truth is the table in
 |----|---------|
 | `192.168.6.200` | Traefik: HTTP/HTTPS for every `*.lan` host |
 | `192.168.6.201` | AdGuard Home: DNS on 53 TCP/UDP (bypasses Traefik) |
-| `192.168.6.202` | agentgateway: HTTPS 443 as `agentgateway.lan` (own cert, bypasses Traefik), HTTP 8080 |
+| `192.168.6.202` | agentgateway: HTTPS 443 as `agentgateway.lan` and `agentgateway.alextio.duckdns.org` (own certs, bypasses Traefik), HTTP 8080 |
 | `192.168.6.203`–`210` | free |
 
 ---

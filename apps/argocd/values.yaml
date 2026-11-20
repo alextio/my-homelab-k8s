@@ -8,14 +8,19 @@
 
 configs:
   params:
-    # Serve plain HTTP: Traefik terminates TLS for argocd.lan (httproute.yaml).
+    # Serve plain HTTP: Traefik terminates TLS for argocd.lan and
+    # argocd.alextio.duckdns.org (httproute.yaml).
     # `kubectl port-forward` still works too.
     server.insecure: true
 
   cm:
-    # The external URL. Argo CD builds the OIDC callback
-    # (https://argocd.lan/auth/callback) from it.
-    url: https://argocd.lan
+    # The external URL. Argo CD builds links and the OIDC callback
+    # (https://argocd.alextio.duckdns.org/auth/callback) from it.
+    url: https://argocd.alextio.duckdns.org
+    # Other URLs Argo CD answers on. SSO started on one of these comes back
+    # to it instead of url. Both callbacks are registered in Dex.
+    additionalUrls: |
+      - https://argocd.lan
     # Login through the shared Dex (apps/dex/), not the chart's bundled one
     # (dex.enabled below). clientSecret is read from the argocd-dex-oidc
     # Secret (externalsecret.yaml). The local admin account keeps working as
