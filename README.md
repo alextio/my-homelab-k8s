@@ -177,7 +177,6 @@ have no `Application` in `manifests/` yet, so Argo CD doesn't deploy them.
 │   ├── coder/                    # values.yaml, ExternalSecret (DB URL for shared Postgres)
 │   └── <service>/                # Add new services here
 │
-├── .journey/                     # Write-ups of each service as it was set up
 ├── .claude/skills/               # Agent skills (e.g. bws-upsert-secret)
 ├── AGENTS.md                     # Conventions: sync waves, IPs, ExternalSecrets
 └── README.md                     # You are here
