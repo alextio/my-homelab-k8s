@@ -4,8 +4,9 @@
 # clients don't need the homelab root CA for *.alextio.duckdns.org hosts.
 #
 # Starts on the staging issuer (not browser-trusted). Once it shows Ready,
-# switch issuerRef.name to duckdns-letsencrypt and delete the traefik-duckdns-tls
-# Secret so cert-manager reissues it from production.
+# switch issuerRef.name to duckdns-letsencrypt. cert-manager sees the Secret
+# was issued by a different issuer (reason IncorrectIssuer) and reissues it
+# from production on its own.
 #
 # Only the wildcard: DuckDNS keeps one TXT record per domain, so adding the
 # bare alextio.duckdns.org here would make the two challenges collide.

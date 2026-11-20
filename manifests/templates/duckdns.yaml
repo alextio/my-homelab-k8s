@@ -19,6 +19,22 @@
 # - It registers an APIService; while the pod is down, API discovery for its
 #   group fails, which can stall Argo CD syncs and namespace deletion.
 #
+# TODO(duckdns): run the webhook as non-root. It needs no root: it only reads
+# /tls (a read-only Secret volume) and makes outbound HTTPS calls; root comes
+# from the image (no USER after FROM alpine:3.20) and the chart setting no
+# securityContext. The chart hardcodes args, containerPort 443 and the pod
+# spec, so this needs the chart vendored into apps/duckdns/ (or kustomize
+# helmCharts, which needs --enable-helm in Argo CD). Then set:
+#   - args: --secure-port=8443, containerPort 8443 (Service targets the
+#     named port "https", so it follows)
+#   - pod securityContext: runAsNonRoot, runAsUser/runAsGroup 65532,
+#     seccompProfile RuntimeDefault
+#   - container securityContext: allowPrivilegeEscalation false,
+#     readOnlyRootFilesystem true, capabilities drop ALL
+# Do the other "patch later" items in the same pass: own image built from
+# a pinned commit without the token-in-URL error log, a dedicated namespace
+# (fix the secret-reader RoleBinding subject), and a NetworkPolicy.
+#
 # Sync wave -2: operator. Its serving cert comes from cert-manager (same
 # wave), so it retries until cert-manager's webhook is up.
 apiVersion: argoproj.io/v1alpha1
