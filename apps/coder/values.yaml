@@ -62,29 +62,23 @@ coder:
     - name: homelab-root-ca
       configMap:
         name: homelab-root-ca
-    # SSH to coder-1, where templates run workspaces on rootless Podman
-    # (Docker provider, host = "ssh://coder-1"): key and known_hosts from
-    # externalsecret-ssh.yaml, ssh_config from configmap-ssh.yaml.
-    # Files are root-owned 0444: readable by the coder user (uid 1000), and
-    # ssh only rejects a world-readable key when the user running it owns it.
-    # No Reloader opt-in: without subPath kubelet updates these in place and
-    # ssh re-reads them on every connection, so a new key needs no restart.
-    - name: ssh
-      projected:
-        defaultMode: 0444
-        sources:
-          - secret:
-              name: coder-ssh
-          - configMap:
-              name: coder-ssh-config
   volumeMounts:
     - name: homelab-root-ca
       mountPath: /etc/ssl/certs/homelab-root-ca.crt
       subPath: ca.crt
       readOnly: true
-    - name: ssh
-      mountPath: /home/coder/.ssh
-      readOnly: true
+
+  serviceAccount:
+    # No workspace permissions in Coder's own namespace: a pod created there
+    # could mount coder-db-url and coder-dex-oidc.
+    workspacePerms: false
+    # Templates create workspaces (Deployment + PVC) in coder-workspaces
+    # (namespace-workspaces.yaml) only. The chart renders a Role there and
+    # binds it to Coder's service account.
+    workspaceNamespaces:
+      - name: coder-workspaces
+        workspacePerms: true
+        enableDeployments: true
 
   # The chart defaults to requests = limits = 2 CPU / 4Gi. On the single
   # 4-CPU node that left no room to surge a second pod, so every rollout

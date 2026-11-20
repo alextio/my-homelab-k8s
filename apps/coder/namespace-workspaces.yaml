@@ -1,0 +1,18 @@
+# Coder workspace pods (templates use the kubernetes provider). Kept out of
+# the `coder` namespace so a workspace can't mount Coder's own Secrets
+# (database URL, OIDC client secret).
+#
+# `restricted` Pod Security: workspaces run as non-root with no capabilities,
+# no privilege escalation and no host namespaces or hostPath, so a pod Coder
+# creates (or anyone with Coder's service account) can't become root on the
+# node. Don't lower it; nested containers (Podman/Docker in a workspace) are
+# out of scope here for that reason.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: coder-workspaces
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted
