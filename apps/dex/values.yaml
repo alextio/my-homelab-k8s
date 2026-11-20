@@ -83,6 +83,9 @@ config:
       secretEnv: DEX_CODER_CLIENT_SECRET
       redirectURIs:
         - https://coder.lan/api/v2/users/oidc/callback
+        # Used once CODER_ACCESS_URL in apps/coder/values.yaml moves to the
+        # Let's Encrypt name.
+        - https://coder.alextio.duckdns.org/api/v2/users/oidc/callback
     - id: grafana
       name: Grafana
       secretEnv: DEX_GRAFANA_CLIENT_SECRET

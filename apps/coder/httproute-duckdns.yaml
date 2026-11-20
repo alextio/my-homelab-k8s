@@ -1,0 +1,26 @@
+# Second HTTPRoute for Coder on the Let's Encrypt name. The chart's own route
+# (coder.httproute in values.yaml) takes a single host, so this one is raw.
+# It mirrors the chart route's backend (Service coder, port 80).
+#
+# CODER_ACCESS_URL is still https://coder.lan, so Coder builds links, OIDC
+# callbacks and workspace agent URLs on coder.lan. Moving it later means
+# switching that env var (Dex already accepts the new callback) and
+# rebuilding running workspaces, whose agents have the old URL baked in.
+# A subdomain wildcard for workspace apps (*.coder.alextio.duckdns.org) would
+# need its own cert: *.alextio.duckdns.org only covers one level.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: coder-duckdns
+  namespace: coder
+spec:
+  parentRefs:
+    - name: traefik
+      namespace: traefik
+      sectionName: websecure-duckdns
+  hostnames:
+    - coder.alextio.duckdns.org
+  rules:
+    - backendRefs:
+        - name: coder
+          port: 80
