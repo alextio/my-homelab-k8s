@@ -6,3 +6,10 @@
 # deprecated installCRDs flag.)
 crds:
   enabled: false
+
+# DNS-01 self-check: query public resolvers directly instead of the cluster's
+# DNS (CoreDNS -> AdGuard). An AdGuard rewrite for *.alextio.duckdns.org
+# (apps/duckdns/) would otherwise hide the _acme-challenge TXT record and the
+# check never passes.
+dns01RecursiveNameservers: "1.1.1.1:53,1.0.0.1:53"
+dns01RecursiveNameserversOnly: true

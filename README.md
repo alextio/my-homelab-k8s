@@ -81,6 +81,9 @@ to Git.
 >   and issues a single `*.lan` wildcard (`apps/traefik/certificate-wildcard.yaml`)
 >   for the Gateway. The same CA also signs the bitwarden-sdk-server cert that
 >   ESO talks to.
+>   Hosts under `alextio.duckdns.org` get a publicly trusted Let's Encrypt
+>   wildcard instead (`apps/traefik/certificate-wildcard-duckdns.yaml`), solved
+>   by DNS-01 through the `duckdns` webhook, on a second Gateway listener.
 > - **External Secrets + Bitwarden over Sealed Secrets**: secret values live
 >   in Bitwarden Secrets Manager, not in Git, encrypted or otherwise. Git only
 >   holds `ExternalSecret` objects that point at a Bitwarden secret UUID.
@@ -113,6 +116,7 @@ router's DHCP range. The source of truth is the table in
 | [AdGuard Home](https://adguard.com/adguard-home/overview.html) | Network-wide DNS filtering | `adguard-home` | `adguard.lan` (DNS on `192.168.6.201`) |
 | [Dex](https://dexidp.io/) | OIDC identity provider: single sign-on for Argo CD, Coder, Grafana, Immich, and (via oauth2-proxy) Prometheus, AdGuard Home and the Traefik dashboard | `dex` | `dex.lan` |
 | [oauth2-proxy](https://oauth2-proxy.github.io/oauth2-proxy/) | Dex login in front of services with no OIDC support (Traefik forwardAuth) | `oauth2-proxy` | n/a |
+| [duckdns](https://github.com/csp33/cert-manager-duckdns-webhook) | cert-manager DNS-01 webhook: Let's Encrypt certs for `*.alextio.duckdns.org` (ClusterIssuers `duckdns-letsencrypt`, `duckdns-letsencrypt-staging`) | `cert-manager` | n/a |
 | [trust-manager](https://cert-manager.io/docs/trust/trust-manager/) | Copies the homelab root CA into a `homelab-root-ca` ConfigMap in every namespace | `cert-manager` | n/a |
 | [agentgateway](https://agentgateway.dev/) | AI/LLM gateway (Claude and OpenRouter backends) | `agentgateway` | n/a |
 | [Coder](https://coder.com/) | Remote development environments (database on the shared Postgres) | `coder` | `coder.lan` |

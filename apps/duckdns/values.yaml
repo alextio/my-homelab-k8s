@@ -1,0 +1,26 @@
+# cert-manager-duckdns-webhook Helm values
+
+# API group the webhook serves. ClusterIssuers reference it in
+# solvers[].dns01.webhook.groupName. Only needs to be unique in the cluster.
+groupName: acme.duckdns.alextio.com
+
+fullnameOverride: cert-manager-duckdns-webhook
+
+# Pinned by digest (multi-arch index for tag 1.0.1, pushed 2024-09-14). The
+# image isn't built by CI, so a tag alone could be replaced under us.
+image:
+  repository: csp33/cert-manager-duckdns-webhook
+  tag: "1.0.1@sha256:6a50d99a0929117c6656eb275ddbb213e8a2d80a7773b33f0b4df840e5b4da48"
+
+# Token comes from the duckdns-token ExternalSecret (key `token`), not from
+# values, so the chart renders no Secret.
+token:
+  existingSecretName: duckdns-token
+
+# ClusterIssuers are defined in apps/duckdns/ instead of by the chart, so they
+# carry no ACME email and only answer for duckdns.org names.
+clusterIssuer:
+  production:
+    create: false
+  staging:
+    create: false

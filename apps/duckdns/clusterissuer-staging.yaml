@@ -1,0 +1,24 @@
+# Let's Encrypt staging issuer for alextio.duckdns.org names. Its certs are NOT
+# browser-trusted; test with it first so a broken setup doesn't spend
+# production rate limits, then switch the Certificate to duckdns-letsencrypt.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: duckdns-letsencrypt-staging
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: duckdns-letsencrypt-staging-account-key
+    solvers:
+      - selector:
+          dnsZones:
+            - alextio.duckdns.org
+        dns01:
+          webhook:
+            groupName: acme.duckdns.alextio.com
+            solverName: duckdns
+            config:
+              apiTokenSecretRef:
+                name: duckdns-token
+                key: token

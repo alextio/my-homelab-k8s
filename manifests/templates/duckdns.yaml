@@ -1,0 +1,72 @@
+# ArgoCD Application — duckdns
+#
+# cert-manager DNS-01 webhook for DuckDNS (csp33/cert-manager-duckdns-webhook),
+# so Let's Encrypt can issue browser-trusted certs (including wildcards) for
+# names under a duckdns.org subdomain without exposing anything to the
+# internet. The ClusterIssuers that use it are in apps/duckdns/.
+#
+# Installed into cert-manager's namespace: the chart's secret-reader
+# RoleBinding always names the ServiceAccount in certManager.namespace, so in
+# any other namespace the webhook could not read its token. The webhook looks
+# the token up in the ClusterIssuer's resource namespace (cert-manager) too.
+#
+# Known risks, accepted for now (patch later):
+# - Unmaintained since 2024-09; the image is pushed by hand, not built by CI,
+#   so it is pinned by digest in apps/duckdns/values.yaml.
+# - On a network error the webhook logs the request URL, which carries the
+#   DuckDNS token as a query parameter. Treat cert-manager pod logs as secret.
+# - The chart sets no securityContext: the container runs as root on 443.
+# - It registers an APIService; while the pod is down, API discovery for its
+#   group fails, which can stall Argo CD syncs and namespace deletion.
+#
+# Sync wave -2: operator. Its serving cert comes from cert-manager (same
+# wave), so it retries until cert-manager's webhook is up.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: duckdns
+  namespace: argocd
+  annotations:
+    # See AGENTS.md "Sync waves".
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  project: default
+  sources:
+    # Source 1: The cert-manager-duckdns-webhook Helm chart
+    - repoURL: https://csp33.github.io/cert-manager-duckdns-webhook
+      chart: cert-manager-duckdns-webhook
+      targetRevision: 1.1.3
+      helm:
+        valueFiles:
+          - $values/apps/duckdns/values.yaml
+    # Source 2: This repo, used only as a $values reference.
+    - repoURL: https://github.com/alextio/my-homelab-k8s
+      targetRevision: {{ .Values.revision }}
+      ref: values
+    # Source 3: This repo, providing the token ExternalSecret and the
+    # ClusterIssuers in apps/duckdns/ (values.yaml is excluded since Source 1
+    # consumes it via $values).
+    - repoURL: https://github.com/alextio/my-homelab-k8s
+      targetRevision: {{ .Values.revision }}
+      path: apps/duckdns
+      directory:
+        recurse: true
+        exclude: 'values.yaml'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    # Waves only order creation; retry until earlier waves are up. See
+    # AGENTS.md "Sync waves".
+    retry:
+      limit: -1
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

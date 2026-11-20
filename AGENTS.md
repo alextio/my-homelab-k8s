@@ -23,7 +23,7 @@ Single source of truth for ordering. Root creates child Applications in wave ord
 | Wave | What | Applications |
 |------|------|--------------|
 | -3 | CRDs only | `gateway-api-crds`, `cert-manager-crds`, `agentgateway-crds` |
-| -2 | Operators / controllers | `argocd`, `cert-manager`, `trust-manager`, `metallb`, `external-secrets`, `cloudnative-pg`, `reloader` |
+| -2 | Operators / controllers | `argocd`, `cert-manager`, `trust-manager`, `duckdns`, `metallb`, `external-secrets`, `cloudnative-pg`, `reloader` |
 | -1 | Shared infrastructure: ingress (needs cert-manager issuers and MetalLB IPs) and the shared database (needs the CNPG operator and ESO) | `traefik`, `postgres` |
 | 0 | Workloads (default) | `kube-prometheus-stack`, `agentgateway`, `adguard-home`, `dex`, `oauth2-proxy`, `immich`, `coder` |
 

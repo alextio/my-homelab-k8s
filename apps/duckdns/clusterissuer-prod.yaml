@@ -1,0 +1,27 @@
+# Let's Encrypt production issuer for alextio.duckdns.org names, solved by the
+# duckdns webhook. Every issued cert lands in public Certificate Transparency
+# logs, so prefer one wildcard (*.alextio.duckdns.org) over per-service names.
+# DuckDNS keeps one TXT record per domain: don't put alextio.duckdns.org and
+# *.alextio.duckdns.org in the same Certificate, their challenges overwrite
+# each other.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: duckdns-letsencrypt
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: duckdns-letsencrypt-account-key
+    solvers:
+      - selector:
+          dnsZones:
+            - alextio.duckdns.org
+        dns01:
+          webhook:
+            groupName: acme.duckdns.alextio.com
+            solverName: duckdns
+            config:
+              apiTokenSecretRef:
+                name: duckdns-token
+                key: token

@@ -1,0 +1,24 @@
+# Wildcard certificate for the shared Gateway's websecure-duckdns listener.
+# secretName must match that listener's certificateRefs in gateway.yaml.
+# Publicly trusted (Let's Encrypt via the duckdns webhook, apps/duckdns/), so
+# clients don't need the homelab root CA for *.alextio.duckdns.org hosts.
+#
+# Starts on the staging issuer (not browser-trusted). Once it shows Ready,
+# switch issuerRef.name to duckdns-letsencrypt and delete the traefik-duckdns-tls
+# Secret so cert-manager reissues it from production.
+#
+# Only the wildcard: DuckDNS keeps one TXT record per domain, so adding the
+# bare alextio.duckdns.org here would make the two challenges collide.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: traefik-wildcard-duckdns
+  namespace: traefik
+spec:
+  secretName: traefik-duckdns-tls
+  dnsNames:
+    - "*.alextio.duckdns.org"
+  issuerRef:
+    name: duckdns-letsencrypt-staging
+    kind: ClusterIssuer
+    group: cert-manager.io

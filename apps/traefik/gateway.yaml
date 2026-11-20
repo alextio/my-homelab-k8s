@@ -1,5 +1,8 @@
 # Shared Gateway that all HTTPRoutes attach to. Replaces the websecure
-# entrypoint as the attachment point for routes.
+# entrypoint as the attachment point for routes. Two HTTPS listeners on the
+# same port, picked by SNI: *.lan (homelab CA) and *.alextio.duckdns.org
+# (Let's Encrypt). Routes pick a listener with parentRefs[].sectionName
+# (websecure or websecure-duckdns) and a hostname that matches it.
 #
 # Listener port is the container port behind the websecure entrypoint (8443),
 # not the externally exposed 443 (hostPort/Service map 443 -> 8443).
@@ -20,6 +23,19 @@ spec:
         certificateRefs:
           # Written by the traefik-wildcard Certificate (certificate-wildcard.yaml).
           - name: traefik-tls
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: websecure-duckdns
+      protocol: HTTPS
+      port: 8443
+      hostname: "*.alextio.duckdns.org"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          # Written by the traefik-wildcard-duckdns Certificate
+          # (certificate-wildcard-duckdns.yaml).
+          - name: traefik-duckdns-tls
       allowedRoutes:
         namespaces:
           from: All
