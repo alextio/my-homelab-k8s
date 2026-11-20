@@ -91,8 +91,8 @@ coder:
 
   # The chart defaults to requests = limits = 2 CPU / 4Gi. On the single
   # 4-CPU node that left no room to surge a second pod, so every rollout
-  # stuck Pending. Coder is mostly idle; workspaces run on coder-1, not
-  # here. Limits keep the old ceiling for template builds.
+  # stuck Pending. Coder is mostly idle; workspaces run on the workspace
+  # node, not here. Limits keep the old ceiling for template builds.
   resources:
     requests:
       cpu: 250m

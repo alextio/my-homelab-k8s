@@ -4,11 +4,11 @@ Terraform templates for Coder (`apps/coder`). Argo CD doesn't deploy them (`temp
 
 ## `kubernetes/`
 
-Each workspace is a Deployment (scaled to 0 when stopped) and a PVC for `/home/coder` in the `coder-workspaces` namespace, on the k3s node `coder-1`.
+Each workspace is a Deployment (scaled to 0 when stopped) and a PVC for `/home/coder` in the `coder-workspaces` namespace, on the dedicated k3s workspace node. None is joined at the moment (see "Coder workspaces" in AGENTS.md).
 
 The isolation comes from the cluster, not the template. See "Coder workspaces" in [AGENTS.md](../../../AGENTS.md#coder-workspaces):
 
-- **Node:** `coder-1` only runs workspace pods. It's tainted `coder-workspaces=true:NoSchedule`, and the template tolerates the taint.
+- **Node:** the workspace node only runs workspace pods. It's tainted `coder-workspaces=true:NoSchedule`, and the template tolerates the taint.
 - **Pod Security:** `restricted`. Workspaces run as uid 1000 with no capabilities and no `sudo`, and Docker or Podman can't run inside them.
 - **Network:** nothing can connect in. Workspaces can reach DNS, the Coder Service and the public internet, but not the LAN or other cluster Services.
 - **Agent URL:** the agent connects to `http://coder.coder.svc.cluster.local`, not `https://coder.lan`, because the NetworkPolicy blocks the LAN.

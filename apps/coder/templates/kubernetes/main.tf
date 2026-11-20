@@ -1,5 +1,5 @@
 # Coder template: a workspace is one pod in coder-workspaces, on the
-# dedicated node coder-1, with a PVC for /home/coder.
+# dedicated workspace node (label and taint coder-workspaces), with a PVC for /home/coder.
 #
 # The isolation lives in the cluster (03-argocd-kubernetes AGENTS.md,
 # "Coder workspaces"): restricted Pod Security, a default-deny
@@ -73,7 +73,7 @@ data "coder_parameter" "cpu" {
   }
 }
 
-# Memory is requested in full so workspaces can't overcommit coder-1's RAM.
+# Memory is requested in full so workspaces can't overcommit the workspace node's RAM.
 data "coder_parameter" "memory" {
   name         = "memory"
   display_name = "Memory"
