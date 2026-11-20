@@ -83,16 +83,16 @@ config:
       secretEnv: DEX_CODER_CLIENT_SECRET
       redirectURIs:
         - https://coder.lan/api/v2/users/oidc/callback
-        # Used once CODER_ACCESS_URL in apps/coder/values.yaml moves to the
-        # Let's Encrypt name.
+        # CODER_ACCESS_URL (apps/coder/values.yaml). The coder.lan callback
+        # above stays for rollback; drop it once nothing uses coder.lan.
         - https://coder.alextio.duckdns.org/api/v2/users/oidc/callback
     - id: grafana
       name: Grafana
       secretEnv: DEX_GRAFANA_CLIENT_SECRET
       redirectURIs:
         - https://grafana.lan/login/generic_oauth
-        # Used once root_url in apps/kube-prometheus-stack/values.yaml moves
-        # to the Let's Encrypt name.
+        # root_url (apps/kube-prometheus-stack/values.yaml). The grafana.lan
+        # callback above stays for rollback; drop it once nothing uses it.
         - https://grafana.alextio.duckdns.org/login/generic_oauth
     - id: immich
       name: Immich

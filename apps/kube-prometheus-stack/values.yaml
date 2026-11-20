@@ -49,9 +49,11 @@ grafana:
     dashboards:
       default_home_dashboard_path: /tmp/dashboards/nodes.json # path is inside grafana container
     server:
-      # Grafana builds the OAuth callback (https://grafana.lan/login/generic_oauth)
-      # from this.
-      root_url: https://grafana.lan
+      # Grafana builds links and the OAuth callback
+      # (https://grafana.alextio.duckdns.org/login/generic_oauth) from this.
+      # The Let's Encrypt name; grafana.lan still serves (httproute-grafana.yaml),
+      # but logins land on this name.
+      root_url: https://grafana.alextio.duckdns.org
     # Login through Dex (apps/dex/). The local admin login keeps working as a
     # fallback. client_secret comes from GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET
     # (envValueFrom below).

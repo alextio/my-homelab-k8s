@@ -16,11 +16,13 @@ coder:
         secretKeyRef:
           name: coder-db-url
           key: url
-    # The URL users and workspace agents reach Coder on. Setting it also
-    # stops the chart defaulting it to the in-cluster Service URL
-    # (envUseClusterAccessURL).
+    # The URL users reach Coder on, and the base for links and the OIDC
+    # callback. The Let's Encrypt name, so browsers need no homelab CA.
+    # Workspace agents don't use it: the kubernetes template points them at
+    # http://coder.coder.svc.cluster.local. Setting it also stops the chart
+    # defaulting it to the in-cluster Service URL (envUseClusterAccessURL).
     - name: CODER_ACCESS_URL
-      value: https://coder.lan
+      value: https://coder.alextio.duckdns.org
     # Login through Dex (apps/dex/). Password login stays enabled so the
     # existing owner account still works. Coder only accepts verified emails;
     # Dex marks its static users verified.
@@ -36,24 +38,26 @@ coder:
     - name: CODER_OIDC_SIGN_IN_TEXT
       value: Sign in with Dex
     # No CODER_WILDCARD_ACCESS_URL yet: workspace apps are served on paths
-    # under coder.lan. A subdomain wildcard needs a matching TLS cert and DNS
-    # (*.coder.lan isn't covered by the *.lan wildcard).
+    # under the access URL. A subdomain wildcard needs its own TLS cert and
+    # DNS: *.alextio.duckdns.org only covers one level, not
+    # *.coder.alextio.duckdns.org.
 
   service:
     # Chart default is LoadBalancer, which would take a MetalLB IP. Traffic
     # comes through the Traefik Gateway instead.
     type: ClusterIP
 
-  # Chart-rendered HTTPRoute on the shared Traefik Gateway. DNS (*.lan ->
-  # Traefik) and TLS (*.lan wildcard cert) already cover coder.lan; Coder
-  # itself serves plain HTTP behind it.
+  # Chart-rendered HTTPRoute on the shared Traefik Gateway's Let's Encrypt
+  # listener. DNS (AdGuard *.alextio.duckdns.org -> Traefik) and TLS (the
+  # traefik-wildcard-duckdns cert) cover it; Coder itself serves plain HTTP
+  # behind it. coder.lan keeps working through httproute-lan.yaml.
   httproute:
     enable: true
-    host: coder.lan
+    host: coder.alextio.duckdns.org
     parentRefs:
       - name: traefik
         namespace: traefik
-        sectionName: websecure
+        sectionName: websecure-duckdns
 
   # Trust the homelab CA for the calls to https://dex.lan. The ConfigMap is
   # written into every namespace by trust-manager (apps/trust-manager/). Go
