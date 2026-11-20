@@ -1,6 +1,11 @@
 # Chart: coder-v2/coder (https://helm.coder.com/v2)
 # Coder is configured almost entirely through CODER_* environment variables.
 coder:
+  # Switched off: Coder runs standalone on a VM for now. Everything else here
+  # (namespace, RBAC, coder-workspaces, secrets, the database) stays, so
+  # deleting this line brings Coder back with its users and templates.
+  replicaCount: 0
+
   # Reloader (apps/reloader/values.yaml): roll when the DB URL, OIDC secret or
   # homelab CA change. The CA is a subPath mount, which never updates in a
   # running pod, so a CA rotation needs this restart.
