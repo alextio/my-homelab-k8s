@@ -1,0 +1,54 @@
+# Workspaces run code from agents, so treat them as untrusted. Nothing may
+# connect in (Coder reaches the agent over the agent's own outbound
+# connection), and they may only connect out to:
+#   - cluster DNS
+#   - the Coder pods, directly: templates point the agent at
+#     http://coder.coder.svc.cluster.local, not https://coder.lan, which
+#     would go through Traefik's LAN IP
+#   - the internet, excluding every private range
+# That leaves out the LAN (Proxmox, AdGuard admin, the NAS, nodes and the
+# Kubernetes API on 192.168.6.101) and every other pod and Service in the
+# cluster, including the ones only protected at Traefik/oauth2-proxy.
+# Enforced by k3s's built-in network policy controller.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: workspaces
+  namespace: coder-workspaces
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: coder
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: coder
+      ports:
+        - protocol: TCP
+          port: 8080
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8 # includes pod 10.42/16 and Service 10.43/16 CIDRs
+              - 172.16.0.0/12
+              - 192.168.0.0/16 # LAN
+              - 100.64.0.0/10 # CGNAT (Tailscale)
+              - 169.254.0.0/16 # link-local
