@@ -3,10 +3,10 @@
 # Publicly trusted (Let's Encrypt via the duckdns webhook, apps/duckdns/), so
 # clients don't need the homelab root CA for *.alextio.duckdns.org hosts.
 #
-# Starts on the staging issuer (not browser-trusted). Once it shows Ready,
-# switch issuerRef.name to duckdns-letsencrypt. cert-manager sees the Secret
-# was issued by a different issuer (reason IncorrectIssuer) and reissues it
-# from production on its own.
+# Issued by production. It was first tested on duckdns-letsencrypt-staging;
+# switch back to that issuer when debugging, so failed attempts don't count
+# against production rate limits. Changing issuerRef makes cert-manager
+# reissue on its own (reason IncorrectIssuer).
 #
 # Only the wildcard: DuckDNS keeps one TXT record per domain, so adding the
 # bare alextio.duckdns.org here would make the two challenges collide.
@@ -20,6 +20,6 @@ spec:
   dnsNames:
     - "*.alextio.duckdns.org"
   issuerRef:
-    name: duckdns-letsencrypt-staging
+    name: duckdns-letsencrypt
     kind: ClusterIssuer
     group: cert-manager.io
