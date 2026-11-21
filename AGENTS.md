@@ -43,7 +43,7 @@ MetalLB pool `default-pool` covers `192.168.6.200`–`192.168.6.210`. It must st
 |----|---------|-------|------------|
 | 192.168.6.200 | Traefik | HTTP/HTTPS ingress for all `*.lan` hosts (incl. `adguard.lan`) | `apps/traefik/values.yaml` |
 | 192.168.6.201 | AdGuard Home | DNS 53 TCP/UDP, bypasses Traefik; dashboard goes through Traefik | `apps/adguard-home/values.yaml` |
-| 192.168.6.202 | agentgateway | AI/LLM gateway proxy, HTTPS 443 as `agentgateway.lan` and `agentgateway.alextio.duckdns.org` (own certs, bypasses Traefik), HTTP 8080 | `apps/agentgateway/gateway.yaml` |
+| 192.168.6.202 | agentgateway | AI/LLM gateway proxy, **scaled to zero** (needs x86-64-v2; see `apps/agentgateway/parameters-proxy.yaml`), HTTPS 443 as `agentgateway.lan` and `agentgateway.alextio.duckdns.org` (own certs, bypasses Traefik), HTTP 8080 | `apps/agentgateway/gateway.yaml` |
 | 192.168.6.203–210 | free | still in `default-pool` | `apps/metallb/default-pool.yaml` |
 | 192.168.6.103 | coder-1 (Proxmox VM 1003, not a MetalLB IP) | k3s agent node for Coder workspaces only (see [Coder workspaces](#coder-workspaces)) | VM in the parent repo's `01-opentofu/proxmox/terraform.tfvars` |
 

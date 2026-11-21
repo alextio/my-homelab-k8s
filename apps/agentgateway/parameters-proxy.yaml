@@ -1,0 +1,15 @@
+# Overrides for the agentgateway-proxy Deployment that the controller
+# generates from the Gateway (gateway.yaml, infrastructure.parametersRef).
+#
+# Scaled to zero: the proxy image needs x86-64-v2, which the Proxmox host's
+# CPU (AMD Athlon II, x86-64-v1) lacks, so it crash-loops. The controller
+# keeps running. Remove `replicas` once the cluster runs on newer hardware.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayParameters
+metadata:
+  name: agentgateway-proxy
+  namespace: agentgateway
+spec:
+  deployment:
+    spec:
+      replicas: 0
