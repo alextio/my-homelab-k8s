@@ -1,0 +1,12 @@
+[extend]
+useDefault = true
+
+# ExternalSecret remoteRefs name Bitwarden secrets by ID (`key: <uuid>`).
+# An ID is a pointer, not the value: reading it needs the BWS machine
+# token, which lives only in the cluster. Only that exact line shape is
+# allowed, so a UUID-shaped token anywhere else (e.g. a Proxmox API token
+# secret) is still caught.
+[[allowlists]]
+description = "Bitwarden secret IDs in ExternalSecret remoteRefs"
+regexTarget = "match"
+regexes = ['''^key: [0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\s*$''']
