@@ -45,15 +45,16 @@ MetalLB pool `default-pool` covers `192.168.6.200`–`192.168.6.210`. It must st
 | 192.168.6.201 | AdGuard Home | DNS 53 TCP/UDP, bypasses Traefik; dashboard goes through Traefik | `apps/adguard-home/values.yaml` |
 | 192.168.6.202 | agentgateway | AI/LLM gateway proxy, HTTPS 443 as `agentgateway.lan` and `agentgateway.alextio.duckdns.org` (own certs, bypasses Traefik), HTTP 8080 | `apps/agentgateway/gateway.yaml` |
 | 192.168.6.203–210 | free | still in `default-pool` | `apps/metallb/default-pool.yaml` |
-| 192.168.6.103 | coder-1 (Proxmox VM 1003, not a MetalLB IP) | k3s agent node for Coder workspaces only (see [Coder workspaces](#coder-workspaces)) | VM in the parent repo's `01-opentofu/proxmox/terraform.tfvars` |
 
 Not verified from the cluster: whether non-cluster devices (DHCP leases, Proxmox VMs/LXCs) hold any address in this range.
 
 ## Coder workspaces
 
-Coder templates run workspaces as pods in the `coder-workspaces` namespace, on the dedicated node `coder-1`. Workspaces run code from agents, so treat them as untrusted. Keep these in place:
+Coder templates run workspaces as pods in the `coder-workspaces` namespace, on a dedicated node. Workspaces run code from agents, so treat them as untrusted. Keep these in place:
 
-- **Node:** `coder-1` is a k3s *agent* (never a server), joined with the cluster's separate agent token, not the server token. It has the taint `coder-workspaces=true:NoSchedule` and label `coder-workspaces=true`. Only workspace pods tolerate the taint. Don't add that toleration to other workloads.
+**Currently switched off:** Coder is scaled to zero (`coder.replicaCount: 0` in `apps/coder/values.yaml`), and no node is a workspace node. The former one, `coder-1` (192.168.6.103), left the cluster and is now a standalone agent VM outside this repo. The namespace, RBAC and NetworkPolicy below stay in place, so switching back means joining a workspace node and removing `replicaCount`.
+
+- **Node:** the workspace node is a k3s *agent* (never a server), joined with the cluster's separate agent token (`agent-token` on `k3s-server-1`), not the server token. It has the taint `coder-workspaces=true:NoSchedule` and label `coder-workspaces=true`. Only workspace pods tolerate the taint. Don't add that toleration to other workloads. If you reuse a node name, delete its `<name>.node-password.k3s` Secret in `kube-system` first, or k3s refuses the join.
 - **Namespace** (`apps/coder/namespace-workspaces.yaml`): `restricted` Pod Security. Don't lower it, and don't add exceptions for nested containers.
 - **Network** (`apps/coder/networkpolicy-workspaces.yaml`): default-deny ingress; egress only to cluster DNS, the Coder pods and the non-private internet. Allowing a LAN range or another namespace makes it reachable from every workspace, and bypasses Traefik/oauth2-proxy for Services in it.
 - **RBAC:** Coder's service account manages pods, PVCs and Deployments in `coder-workspaces` only (`coder.serviceAccount.workspaceNamespaces` in `apps/coder/values.yaml`). `workspacePerms` stays `false` for the `coder` namespace, whose Secrets a pod there could mount.
