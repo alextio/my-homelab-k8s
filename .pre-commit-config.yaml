@@ -1,0 +1,26 @@
+# Same checks CI runs, so they fail before a push instead of after.
+#   uv tool install pre-commit && pre-commit install
+# The render hook needs helm, kubectl and python3 with pyyaml, and network
+# access to pull charts; it takes about a minute.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+        # Helm templates aren't plain YAML
+        exclude: ^manifests/templates/
+      - id: check-merge-conflict
+      - id: detect-private-key
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.28.0
+    hooks:
+      - id: gitleaks
+  - repo: local
+    hooks:
+      - id: render-and-check
+        name: render applications and check repo rules
+        entry: bash -c 'out=$(mktemp -d) && python3 ci/render.py --out "$out" 2>/dev/null && python3 ci/check_rules.py --rendered "$out"'
+        language: system
+        files: ^(manifests/|apps/|AGENTS\.md$|ci/)
+        pass_filenames: false

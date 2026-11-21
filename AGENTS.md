@@ -16,6 +16,17 @@ Deploying a service like MetalLB is a learning exercise, and its outcome is thes
 - A literal `{{` in a template must be escaped as `{{ "{{" }}`.
 - Before committing, check the render with `helm template root manifests`.
 
+## CI and pull requests
+
+**Merging to `main` deploys.** `main` is protected: work on a branch, open a PR, and leave the merge to the user (see the parent repo's `AGENTS.md`). CI (`.github/workflows/ci.yml`) has no cluster access; it checks what Argo CD *would* apply:
+
+- `ci/render.py` renders every Application the way Argo CD does (root chart, then each child's Helm chart with its `$values` files, directory and kustomize sources, external git paths), one file per Application, with Secret data redacted.
+- kubeconform validates the render against Kubernetes 1.36 and the CRDs-catalog schemas.
+- `ci/check_rules.py` enforces this file: the **Sync waves** table, `retry.limit: -1`, the **IP address allocations** table (and the MetalLB pool), `{{ .Values.revision }}` on this repo's sources, and no committed Secret with data. **Updating these tables is part of the change**, not a follow-up: CI fails if they drift from the manifests.
+- The `diff` job comments the rendered manifest diff against the base branch on the PR. Run `ci/diff.sh` locally before opening the PR and summarize the diff in the PR body.
+
+Run `pre-commit run --all-files` before pushing; it runs the render and rule checks (needs `helm`, `kubectl`, `python3` with `pyyaml`).
+
 ## Sync waves
 
 Single source of truth for ordering. Root creates child Applications in wave order, but it does not wait for a wave to be Healthy before starting the next. Every `sync-wave` annotation in this repo must use a row below, with a comment pointing back here. Do not invent new numbers.

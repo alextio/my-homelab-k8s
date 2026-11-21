@@ -1,0 +1,108 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  HELM_VERSION: v3.19.0
+  KUBECONFORM_VERSION: v0.7.0
+  # k3s on the cluster is v1.36 (02-ansible k3s_version)
+  KUBERNETES_VERSION: 1.36.0
+
+jobs:
+  # Renders every Application the way Argo CD would, then validates the
+  # result. Merging to main deploys, so this is the gate that matters.
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install pyyaml
+      - uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+      - name: render
+        run: python3 ci/render.py --out rendered
+      - name: kubeconform
+        run: |
+          curl -sSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" | tar -xz kubeconform
+          ./kubeconform -strict -summary -ignore-missing-schemas \
+            -kubernetes-version "$KUBERNETES_VERSION" \
+            -schema-location default \
+            -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+            rendered/
+      - name: repo rules (sync waves, IPs, no committed secrets)
+        run: python3 ci/check_rules.py --rendered rendered
+
+  # Posts the rendered manifest diff against the base branch, so a review
+  # sees what will actually change in the cluster on merge. Secret data is
+  # redacted by the renderer.
+  diff:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install pyyaml
+      - uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+      - name: render diff
+        run: ci/diff.sh "origin/${{ github.base_ref }}" > manifest.diff
+      - name: post diff
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          marker='<!-- manifest-diff -->'
+          {
+            echo "$marker"
+            echo "### Rendered manifest diff against \`${{ github.base_ref }}\`"
+            if [ ! -s manifest.diff ]; then
+              echo "No changes to rendered manifests."
+            else
+              echo "$(grep -c '^diff ' manifest.diff) file(s) changed, $(grep -c '^[+-][^+-]' manifest.diff) line(s)."
+              echo
+              echo '<details><summary>diff</summary>'
+              echo
+              echo '```diff'
+              head -c 60000 manifest.diff
+              echo
+              echo '```'
+              [ "$(wc -c < manifest.diff)" -gt 60000 ] && echo "_Truncated; the full diff is in the job summary._"
+              echo '</details>'
+            fi
+          } > comment.md
+          { echo '```diff'; cat manifest.diff; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate \
+                 --jq ".[] | select(.body | startswith(\"$marker\")) | .id" | head -1)
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -F body=@comment.md >/dev/null
+          else
+            gh pr comment "$PR" --body-file comment.md
+          fi
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        run: |
+          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_x64.tar.gz | tar -xz gitleaks
+          ./gitleaks git --redact --verbose .
