@@ -6,6 +6,11 @@ metadata:
 spec:
   gatewayClassName: agentgateway
   infrastructure:
+    # Scales the proxy to zero for now (parameters-proxy.yaml).
+    parametersRef:
+      group: agentgateway.dev
+      kind: AgentgatewayParameters
+      name: agentgateway-proxy
     annotations:
       # Propagated to the generated agentgateway-proxy Service to pin its MetalLB IP.
       # Keep in sync with the IP table in AGENTS.md.
